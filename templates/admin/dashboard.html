@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% block title %}管理后台{% endblock %}
+{% block page_title %}管理后台{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="admin-sidebar">
+        <div class="admin-menu">
+            <a href="#users" class="menu-item active" data-target="users-panel">
+                <i class="mdui-icon material-icons">people</i>
+                用户管理
+            </a>
+            <a href="#diaries" class="menu-item" data-target="diaries-panel">
+                <i class="mdui-icon material-icons">book</i>
+                日记管理
+            </a>
+            <a href="#settings" class="menu-item" data-target="settings-panel">
+                <i class="mdui-icon material-icons">settings</i>
+                网站设置
+            </a>
+        </div>
+    </div>
+    
+    <div class="admin-content">
+        <div id="users-panel" class="panel active">
+            <div class="panel-header">
+                <h2>用户管理</h2>
+            </div>
+            <div class="mdui-table-fluid">
+                <table class="mdui-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>用户名</th>
+                            <th>昵称</th>
+                            <th>注册时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-list">
+                        <!-- 用户列表将通过JS动态加载 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="diaries-panel" class="panel">
+            <div class="panel-header">
+                <h2>日记管理</h2>
+            </div>
+            <div class="mdui-table-fluid">
+                <table class="mdui-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>标题</th>
+                            <th>作者</th>
+                            <th>发布时间</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="diaries-list">
+                        <!-- 日记列表将通过JS动态加载 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="settings-panel" class="panel">
+            <div class="panel-header">
+                <h2>网站设置</h2>
+            </div>
+            <form id="settings-form" class="mdui-p-a-2">
+                <div class="mdui-textfield">
+                    <label class="mdui-textfield-label">主题色</label>
+                    <input type="color" name="theme_color" class="mdui-textfield-input">
+                </div>
+                <div class="mdui-textfield">
+                    <label class="mdui-textfield-label">字体设置</label>
+                    <select name="font_family" class="mdui-select">
+                        <option value="975HazyGothic SC">默认字体</option>
+                        <option value="Microsoft YaHei">微软雅黑</option>
+                        <option value="SimSun">宋体</option>
+                    </select>
+                </div>
+                <div class="mdui-textfield">
+                    <label class="mdui-textfield-label">自定义CSS</label>
+                    <textarea name="custom_css" class="mdui-textfield-input" rows="5"></textarea>
+                </div>
+                <button type="submit" class="mdui-btn mdui-btn-raised mdui-color-theme">保存设置</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.admin-container {
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+}
+
+.admin-sidebar {
+    width: 200px;
+    flex-shrink: 0;
+}
+
+.admin-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 8px;
+    color: #333;
+    text-decoration: none;
+    transition: all 0.3s;
+}
+
+.menu-item:hover, .menu-item.active {
+    background: #f5f5f5;
+}
+
+.admin-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.panel {
+    display: none;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.panel.active {
+    display: block;
+}
+
+.panel-header {
+    padding: 20px;
+    border-bottom: 1px solid #eee;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 面板切换
+    document.querySelectorAll('.menu-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.querySelectorAll('.panel').forEach(panel => panel.classList.remove('active'));
+            document.querySelectorAll('.menu-item').forEach(menuItem => menuItem.classList.remove('active'));
+            
+            const targetPanel = document.getElementById(this.dataset.target);
+            targetPanel.classList.add('active');
+            this.classList.add('active');
+        });
+    });
+
+    // 加载用户列表
+    function loadUsers() {
+        fetch('/api/admin/users')
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.getElementById('users-list');
+                tbody.innerHTML = data.users.map(user => `
+                    <tr>
+                        <td>${user.id}</td>
+                        <td>${user.username}</td>
+                        <td>${user.nickname || '-'}</td>
+                        <td>${new Date(user.created_at).toLocaleDateString()}</td>
+                        <td>
+                            <button class="mdui-btn mdui-btn-icon" onclick="deleteUser(${user.id})">
+                                <i class="mdui-icon material-icons">delete</i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            });
+    }
+
+    // 加载日记列表
+    function loadDiaries() {
+        fetch('/api/admin/diaries')
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.getElementById('diaries-list');
+                tbody.innerHTML = data.diaries.map(diary => `
+                    <tr>
+                        <td>${diary.id}</td>
+                        <td>${diary.title}</td>
+                        <td>${diary.author}</td>
+                        <td>${new Date(diary.created_at).toLocaleDateString()}</td>
+                        <td>${diary.is_public ? '公开' : '私密'}</td>
+                        <td>
+                            <button class="mdui-btn mdui-btn-icon" onclick="deleteDiary(${diary.id})">
+                                <i class="mdui-icon material-icons">delete</i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            });
+    }
+
+    // 保存设置
+    document.getElementById('settings-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        fetch('/api/admin/settings', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) {
+                mdui.snackbar({message: '设置已保存'});
+            }
+        });
+    });
+
+    // 初始加载
+    loadUsers();
+    loadDiaries();
+});
+</script>
+{% endblock %}

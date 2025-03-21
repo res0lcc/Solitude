@@ -1,0 +1,64 @@
+/* 在原有mdui.min.css的基础上添加以下样式 */
+/* 统一页面整体风格 */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #2b2b2b !important;
+    color: #e0e0e0 !important;
+}
+
+/* 圆角及统一颜色 */
+.mdui-card,
+.mdui-btn,
+.mdui-appbar,
+.mdui-textfield-input,
+.mdui-list-item {
+    border-radius: 8px !important;
+}
+
+/* 顶部导航和工具栏 */
+.mdui-appbar, .mdui-toolbar {
+    background-color: #333333 !important;
+    color: #f0f0f0 !important;
+}
+
+/* 按钮样式 */
+.mdui-btn {
+    background-color: #555555 !important;
+    color: #ffffff !important;
+}
+
+/* 卡片样式 */
+.mdui-card {
+    background-color: #424242 !important;
+    color: #e0e0e0 !important;
+}
+
+/* 列表项样式 */
+.mdui-list-item {
+    background-color: #383838 !important;
+    color: #e0e0e0 !important;
+}
+
+/* 文本输入框及标签 */
+.mdui-textfield-input {
+    background-color: #3a3a3a !important;
+    color: #e0e0e0 !important;
+}
+.mdui-textfield-label {
+    color: #e0e0e0 !important;
+}
+
+/* 提示效果 */
+.mdui-btn:hover,
+.mdui-list-item:hover {
+    filter: brightness(1.1);
+}
+
+/* 链接颜色 */
+a {
+    color: #bbbbbb;
+    text-decoration: none;
+}
+a:hover {
+    color: #ffffff;
+}

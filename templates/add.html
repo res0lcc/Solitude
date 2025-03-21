@@ -1,0 +1,689 @@
+{% extends "base.html" %}
+{% block title %}写日记{% endblock %}
+{% block page_title %}写日记{% endblock %}
+{% block content %}
+<div class="diary-card">
+    <div class="diary-header">
+        <h2 class="diary-title">写日记</h2>
+    </div>
+    <div class="diary-content">
+        <form id="diary-form" method="POST">
+            <div class="diary-meta">
+                <div class="meta-item">
+                    <label>标题<span class="optional">(选填)</span></label>
+                    <input type="text" name="title" placeholder="给日记起个标题吧..." class="mdui-textfield-input diary-title-input">
+                </div>
+                <div class="meta-item">
+                    <label>日期</label>
+                    <input type="date" name="date" value="{{ today }}" required class="date-input">
+                </div>
+                <div class="meta-item">
+                    <label>心情</label>
+                    <select name="mood" class="mdui-select mood-select" mdui-select required>
+                        <option value="开心">开心</option>
+                        <option value="平静">平静</option>
+                        <option value="伤心">伤心</option>
+                        <option value="生气">生气</option>
+                        <option value="疲惫">疲惫</option>
+                    </select>
+                </div>
+                <div class="meta-item">
+                    <label>位置</label>
+                    <div class="location">
+                        <i class="mdui-icon material-icons">location_on</i>
+                        <span id="ip-location">正在获取位置...</span>
+                        <input type="hidden" name="location" id="location-input">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="input-group content-group">
+                <textarea name="content" placeholder="今天想说什么..." rows="10" required class="mdui-textfield-input diary-content-input"></textarea>
+            </div>
+            
+            <div class="diary-options">
+                <label class="mdui-checkbox">
+                    <input type="checkbox" name="is_public"/>
+                    <i class="mdui-checkbox-icon"></i>
+                    <span>公开发布</span>
+                </label>
+            </div>
+            
+            <button type="submit" class="mdui-btn mdui-btn-raised mdui-ripple mdui-color-theme">发布日记</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.diary-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.meta-item {
+    width: 100%;
+}
+
+.meta-item label {
+    display: block;
+    margin-bottom: 8px;
+    color: #666;
+    font-size: 0.9em;
+}
+
+.optional {
+    color: #999;
+    font-size: 0.9em;
+    margin-left: 4px;
+}
+
+.diary-title-input,
+.date-input,
+.mood-select,
+.location {
+    width: 100%;
+    padding: 8px 12px;
+    background: #f5f5f5;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+}
+
+input[type="date"] {
+    width: 160px;
+    font-family: inherit;
+}
+
+.mood-select {
+    width: auto !important;
+    min-width: 120px;
+}
+
+.location {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+@media (max-width: 768px) {
+    input[type="date"] {
+        width: 100%;
+    }
+    
+    .mood-select {
+        width: 100% !important;
+    }
+}
+
+.meta-bottom {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.date-input-wrapper,
+.mood-select-wrapper,
+.location-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+label {
+    color: #666;
+    font-size: 0.9em;
+}
+
+.location-input {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #f5f5f5;
+    border-radius: 4px;
+}
+
+.diary-meta {
+    margin-bottom: 20px;
+}
+
+.meta-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.meta-info {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.diary-title-input {
+    flex: 1;
+    font-size: 1.3em !important;
+    padding: 8px 12px !important;
+}
+
+.date-input {
+    width: 130px;
+    padding: 8px 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+}
+
+.mood-select {
+    min-width: 120px;
+    padding: 8px !important;
+}
+
+.location {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #666;
+}
+
+@media (max-width: 768px) {
+    .meta-header, .meta-info {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .date-input, .mood-select {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+}
+
+.meta-row {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 10px;
+}
+
+.title-weather {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+}
+
+.mood-select {
+    width: 120px !important;
+}
+
+.diary-meta {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.diary-title-input {
+    font-size: 1.5em !important;
+    font-weight: 500;
+}
+
+.content-group {
+    position: relative;
+}
+
+#editor-toolbar {
+    position: absolute;
+    top: -40px;
+    right: 0;
+    display: flex;
+    gap: 10px;
+}
+
+.toolbar-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: #f5f5f5;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+}
+
+.toolbar-btn:hover {
+    background: #eee;
+}
+
+.diary-content-input {
+    min-height: 300px;
+    font-size: 1.1em !important;
+    line-height: 1.8;
+    padding: 20px !important;
+}
+
+.diary-images {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.image-preview {
+    position: relative;
+    padding-top: 100%;
+}
+
+.image-preview img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.image-preview .remove-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+}
+
+.diary-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 20px 0;
+}
+
+.diary-tags {
+    flex: 1;
+    margin-left: 20px;
+}
+
+.diary-header-meta {
+    margin-bottom: 20px;
+}
+
+.title-weather {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.diary-title-input {
+    flex: 1;
+    font-size: 1.5em !important;
+    font-weight: 500;
+}
+
+.weather-select {
+    width: auto !important;
+    min-width: 60px;
+    padding: 5px !important;
+    font-size: 1.2em;
+}
+
+.date-location {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.date-input {
+    width: 140px;
+    color: #666;
+}
+
+.location-display {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #666;
+    font-size: 0.9em;
+}
+
+.location-display i {
+    font-size: 16px;
+}
+
+@media (max-width: 768px) {
+    .diary-card {
+        margin: 10px;
+        padding: 15px;
+    }
+
+    .meta-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .title-mood {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .diary-title-input {
+        width: 100%;
+        font-size: 1.2em !important;
+    }
+
+    .mood-select {
+        width: 100% !important;
+        margin-bottom: 10px;
+    }
+
+    .date-location {
+        width: 100%;
+    }
+
+    .diary-content-input {
+        min-height: 200px;
+        font-size: 1em !important;
+        padding: 15px !important;
+    }
+
+    .diary-options {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .diary-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .diary-actions button {
+        width: 100%;
+    }
+}
+
+.diary-card {
+    max-width: 100%;
+    margin: 10px;
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.title-mood {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.diary-title-input {
+    font-size: 1.3em !important;
+    padding: 8px 12px !important;
+    border-radius: 6px;
+}
+
+.mood-select {
+    width: 100% !important;
+    padding: 8px !important;
+    background: #f5f5f5;
+    border-radius: 6px;
+}
+
+.diary-content-input {
+    min-height: 200px;
+    border-radius: 6px;
+    padding: 12px !important;
+    margin-top: 16px;
+}
+
+@media (min-width: 768px) {
+    .diary-card {
+        max-width: 700px;
+        margin: 20px auto;
+        padding: 24px;
+    }
+
+    .title-mood {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .diary-title-input {
+        flex: 1;
+    }
+
+    .mood-select {
+        width: 120px !important;
+    }
+}
+
+.mdui-btn {
+    min-width: 120px;
+    border-radius: 20px;
+    text-transform: none;
+    font-size: 1rem;
+    padding: 8px 24px;
+    transition: all 0.3s ease;
+}
+
+.mdui-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.diary-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+@media (max-width: 768px) {
+    .diary-actions {
+        flex-direction: column;
+    }
+    
+    .mdui-btn {
+        width: 100%;
+        margin-bottom: 8px;
+    }
+}
+
+.meta-row {
+    background: #f8f8f8;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+.title-mood {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.mood-select {
+    min-width: 120px !important;
+    background: white;
+    border-radius: 6px;
+    padding: 8px !important;
+    font-size: 1rem !important;
+}
+
+.date-location {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+input[type="date"] {
+    background: white;
+    border: 1px solid #e0e0e0;
+    padding: 8px 12px;
+    border-radius: 6px;
+    color: #333;
+    font-size: 0.9rem;
+}
+
+.location {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    color: #666;
+}
+
+.mdui-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 44px;
+}
+
+@media (max-width: 768px) {
+    .title-mood {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .date-location {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .mood-select, input[type="date"], .location {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+}
+</style>
+
+<script>
+// 初始化 MDUI 组件
+var inst = new mdui.Select('#weather-select');
+
+function insertImage() {
+    document.getElementById('image-upload').click();
+}
+
+function handleImageUpload(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('image-preview');
+            const div = document.createElement('div');
+            div.className = 'image-preview';
+            div.innerHTML = `
+                <img src="${e.target.result}">
+                <button type="button" class="remove-btn" onclick="this.parentElement.remove()">
+                    <i class="mdui-icon material-icons">close</i>
+                </button>
+            `;
+            preview.appendChild(div);
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+const emojiList = ['😊', '😂', '🥰', '😎', '🤔', '😴', '🌞', '🌙', '⭐', '🌈', '🎵', '❤️'];
+
+function insertEmoji() {
+    const picker = new mdui.Dialog(`
+        <div class="emoji-picker">
+            ${emojiList.map(emoji => `
+                <button type="button" onclick="insertEmojiToContent('${emoji}')" class="emoji-btn">
+                    ${emoji}
+                </button>
+            `).join('')}
+        </div>
+    `, {
+        buttons: [{text: '关闭'}]
+    });
+    picker.open();
+}
+
+function insertEmojiToContent(emoji) {
+    const textarea = document.querySelector('.diary-content-input');
+    const pos = textarea.selectionStart;
+    const text = textarea.value;
+    textarea.value = text.slice(0, pos) + emoji + text.slice(pos);
+}
+
+document.getElementById('diary-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    // 构建日记数据
+    const formData = {
+        title: this.querySelector('[name="title"]').value.trim(),
+        content: this.querySelector('[name="content"]').value.trim(),
+        mood: this.querySelector('[name="mood"]').value,    // 添加心情字段
+        date: this.querySelector('[name="date"]').value,  // 添加日期
+        location: document.getElementById('location-input').value.trim(),
+        is_public: this.querySelector('[name="is_public"]').checked
+    };
+
+    try {
+        const response = await fetch('/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(formData)
+        });
+
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+            mdui.snackbar({
+                message: '发布成功！',
+                timeout: 1500,
+                onClose: () => {
+                    window.location.href = formData.is_public ? '/wall' : '/';
+                }
+            });
+        } else {
+            throw new Error(result.error || '发布失败');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        mdui.snackbar({
+            message: error.message || '发布失败，请稍后重试',
+            timeout: 2000
+        });
+    }
+});
+
+// 获取IP地理位置
+async function getIpLocation() {
+    try {
+        const response = await fetch('https://ipapi.co/json/');
+        const data = await response.json();
+        const location = `${data.city}, ${data.region}`;
+        document.getElementById('ip-location').textContent = location;
+        document.getElementById('location-input').value = location;
+    } catch (error) {
+        console.error('Error fetching location:', error);
+        document.getElementById('ip-location').textContent = '无法获取位置';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    getIpLocation();
+    // ...existing code...
+});
+</script>
+<script src="{{ url_for('static', filename='js/diary.js') }}"></script>
+{% endblock %}

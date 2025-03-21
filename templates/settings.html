@@ -1,0 +1,764 @@
+{% extends "base.html" %}
+{% block title %}个人设置{% endblock %}
+{% block page_title %}个人设置{% endblock %}
+{% block content %}
+<div class="settings-container">
+    <!-- 个人资料卡片 -->
+    <div class="mdui-card settings-card profile-card">
+        <div class="mdui-card-primary">
+            <div class="mdui-card-primary-title">基础信息</div>
+        </div>
+        <div class="mdui-card-content">
+            <div class="profile-section">
+                <div class="profile-header">
+                    <div class="avatar-section" onclick="document.getElementById('avatar-input').click()">
+                        <div class="avatar-box">
+                            {% if current_user.avatar %}
+                                <img src="{{ current_user.avatar }}" class="user-avatar" alt="头像">
+                            {% else %}
+                                <i class="mdui-icon material-icons">account_circle</i>
+                            {% endif %}
+                            <div class="avatar-overlay">
+                                <i class="mdui-icon material-icons">photo_camera</i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="profile-info">
+                        <div class="mdui-textfield">
+                            <label class="mdui-textfield-label">昵称</label>
+                            <input class="mdui-textfield-input" type="text" name="nickname" value="{{ current_user.nickname or '' }}" required/>
+                        </div>
+                    </div>
+                </div>
+                <input type="file" id="avatar-input" name="avatar" accept="image/*" hidden>
+            </div>
+
+            <div class="account-section">
+                <div class="mdui-textfield username-field">
+                    <label class="mdui-textfield-label mdui-text-color-black" style="font-size: 16px;">用户名</label>
+                    <div class="username-input-group">
+                        <input class="mdui-textfield-input" type="text" name="username" 
+                               value="{{ user.username }}" 
+                               {% if not can_change_username %}disabled{% endif %}/>
+                        <div class="username-status">
+                            {% if can_change_username %}
+                            <span class="can-change">可以修改</span>
+                            {% else %}
+                            <span class="cannot-change">{{ days_until_change }}天后可修改</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="password-section" style="margin-top: 8px;">
+                    <div class="mdui-textfield">
+                        <label class="mdui-textfield-label mdui-text-color-black" style="font-size: 16px;">当前密码</label>
+                        <input class="mdui-textfield-input" type="password" name="current_password"/>
+                    </div>
+
+                    <div class="mdui-textfield">
+                        <label class="mdui-textfield-label">新密码</label>
+                        <input class="mdui-textfield-input" type="password" name="new_password"/>
+                    </div>
+
+                    <div class="mdui-textfield">
+                        <label class="mdui-textfield-label">确认新密码</label>
+                        <input class="mdui-textfield-input" type="password" name="confirm_password"/>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- 界面设置卡片 -->
+    <div class="mdui-card settings-card">
+        <div class="mdui-card-primary">
+            <div class="mdui-card-primary-title">主题配色</div>
+            <div class="mdui-card-primary-subtitle">选择你喜欢的主题颜色</div>
+        </div>
+        <div class="mdui-card-content">
+            <div class="theme-grid">
+                {% set themes = [
+                    {'name': '默认蓝', 'primary': '#2196F3', 'accent': '#448AFF'},
+                    {'name': '清新绿', 'primary': '#4CAF50', 'accent': '#69F0AE'},
+                    {'name': '活力橙', 'primary': '#FF9800', 'accent': '#FFB74D'},
+                    {'name': '浪漫粉', 'primary': '#E91E63', 'accent': '#FF4081'},
+                    {'name': '典雅紫', 'primary': '#9C27B0', 'accent': '#E040FB'},
+                    {'name': '深邃蓝', 'primary': '#3F51B5', 'accent': '#536DFE'},
+                    {'name': '纯净白', 'primary': '#FFFFFF', 'accent': '#EEEEEE'},
+                    {'name': '高贵黑', 'primary': '#000000', 'accent': '#424242'},
+                    {'name': '温和灰', 'primary': '#9E9E9E', 'accent': '#BDBDBD'},
+                    {'name': '温暖棕', 'primary': '#795548', 'accent': '#8D6E63'}
+                ] %}
+                {% for theme in themes %}
+                <div class="theme-item mdui-ripple" onclick="setTheme('{{ theme.primary }}', '{{ theme.accent }}')">
+                    <div class="theme-colors">
+                        <div class="color primary" style="background-color: {{ theme.primary }}"></div>
+                        <div class="color accent" style="background-color: {{ theme.accent }}"></div>
+                    </div>
+                    <div class="theme-name">{{ theme.name }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <!-- 卡片样式设置 -->
+    <div class="mdui-card settings-card">
+        <div class="mdui-card-primary">
+            <div class="mdui-card-primary-title">样式设置</div>
+            <div class="mdui-card-primary-subtitle">自定义界面显示效果</div>
+        </div>
+        <div class="mdui-card-content">
+            <div class="mdui-row">
+                <div class="mdui-col-xs-12 mdui-col-sm-6">
+                    <div class="setting-item">
+                        <label>导航栏透明度 (<span id="nav-opacity-value">100</span>%)</label>
+                        <label class="mdui-slider mdui-slider-discrete">
+                            <input type="range" name="nav_opacity" min="50" max="100" value="100" step="1" onInput="updatePreview()"/>
+                        </label>
+                    </div>
+                </div>
+                <div class="mdui-col-xs-12 mdui-col-sm-6">
+                    <div class="setting-item">
+                        <label>侧边栏透明度 (<span id="drawer-opacity-value">100</span>%)</label>
+                        <label class="mdui-slider mdui-slider-discrete">
+                            <input type="range" name="drawer_opacity" min="50" max="100" value="100" step="1" onInput="updatePreview()"/>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mdui-row">
+                <div class="mdui-col-xs-12 mdui-col-sm-6">
+                    <div class="setting-item">
+                        <label>圆角大小 (<span id="radius-value">8</span>px)</label>
+                        <label class="mdui-slider mdui-slider-discrete">
+                            <input type="range" name="card_radius" min="0" max="20" value="8" step="1" onInput="updatePreview()"/>
+                        </label>
+                    </div>
+                </div>
+                <div class="mdui-col-xs-12 mdui-col-sm-6">
+                    <div class="setting-item">
+                        <label>透明度 (<span id="opacity-value">100</span>%)</label>
+                        <label class="mdui-slider mdui-slider-discrete">
+                            <input type="range" name="card_opacity" min="50" max="100" value="100" step="1" onInput="updatePreview()"/>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="effect-options">
+                <label class="mdui-checkbox">
+                    <input type="checkbox" name="glass_effect" onchange="updatePreview()"/>
+                    <i class="mdui-checkbox-icon"></i>
+                    毛玻璃效果
+                </label>
+            </div>
+
+            <!-- 预览区域 -->
+            <div class="preview-section">
+                <div class="mdui-card preview-card" id="preview-card">
+                    <div class="mdui-card-header">
+                        <img class="mdui-card-header-avatar" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%23666' d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>"/>
+                        <div class="mdui-card-header-title">示例日记</div>
+                        <div class="mdui-card-header-subtitle">2024-01-01</div>
+                    </div>
+                    <div class="mdui-card-content"></div>
+                        <div class="diary-meta">
+                            <span class="diary-mood">
+                                <i class="mdui-icon material-icons">mood</i>
+                                心情愉悦
+                            </span>
+                            <span class="diary-location">
+                                <i class="mdui-icon material-icons">location_on</i>
+                                南京，江苏
+                            </span>
+                        </div>
+                        <div class="diary-text">
+                            这是一段示例内容，用于预览卡片样式效果。你可以调整上方的设置来查看不同的显示效果。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 导出日记卡片 -->
+    <div class="mdui-card settings-card">
+        <div class="mdui-card-primary">
+            <div class="mdui-card-primary-title">导出日记(应该有问题暂时用不了)</div>
+            <div class="mdui-card-primary-subtitle">选择要导出的日记和格式</div>
+        </div>
+        <div class="mdui-card-content">
+            <!-- 日记选择区域 -->
+            <div class="export-filter">
+                <div class="date-range">
+                    <div class="mdui-textfield">
+                        <label>日期范围</label>
+                        <input type="date" name="start_date" class="mdui-textfield-input">
+                        <span class="mdui-m-l-1 mdui-m-r-1">至</span>
+                        <input type="date" name="end_date" class="mdui-textfield-input">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 日记列表 -->
+            <div class="diary-list" id="exportable-diaries">
+                <!-- 动态加载日记列表 -->
+            </div>
+
+            <!-- 导出按钮组 -->
+            <div class="export-actions">
+                <button onclick="exportSelected('json')" class="mdui-btn mdui-btn-raised mdui-ripple mdui-color-blue">
+                    <i class="mdui-icon material-icons">code</i>
+                    <span>JSON</span>
+                </button>
+                <button onclick="exportSelected('markdown')" class="mdui-btn mdui-btn-raised mdui-ripple mdui-color-green">
+                    <i class="mdui-icon material-icons">description</i>
+                    <span>Markdown</span>
+                </button>
+                <button onclick="exportSelected('txt')" class="mdui-btn mdui-btn-raised mdui-ripple mdui-color-orange">
+                    <i class="mdui-icon material-icons">text_snippet</i>
+                    <span>Text</span>
+                </button>
+                <button onclick="exportSelected('html')" class="mdui-btn mdui-btn-raised mdui-ripple mdui-color-purple">
+                    <i class="mdui-icon material-icons">html</i>
+                    <span>HTML</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- 悬浮保存按钮 -->
+<button class="mdui-fab mdui-fab-fixed mdui-ripple mdui-color-theme-accent" onclick="saveAllSettings()">
+    <i class="mdui-icon material-icons">save</i>
+</button>
+<style>
+/* 容器和卡片基础样式 */
+.settings-container {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 16px;
+}
+
+.settings-card {
+    width: 100%;
+    max-width: 800px;
+    margin: 20px auto;
+    border-radius: 12px;
+    background-color: white;
+}
+
+/* 卡片头部样式 */
+.mdui-card-primary {
+    padding: 20px 24px;
+    background: #f5f5f5 !important;
+}
+
+.mdui-card-primary-title {
+    color: #333 !important;
+    font-size: 18px !important;
+}
+
+.mdui-card-primary-subtitle {
+    color: #666 !important;
+    font-size: 14px !important;
+}
+
+/* 头像相关样式 */
+.avatar-section {
+    cursor: pointer;
+}
+
+.avatar-box {
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    background: #f5f5f5;
+    overflow: hidden;
+    position: relative;
+}
+
+.avatar-box img,
+.avatar-box i {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.avatar-section:hover .avatar-overlay {
+    opacity: 1;
+}
+
+/* 表单字段样式 */
+.mdui-textfield {
+    margin: 4px 0 !important;
+    padding: 4px 0 !important;
+    min-height: unset;
+}
+
+.mdui-textfield-label {
+    font-size: 14px !important;
+    color: #333 !important;
+}
+
+/* 主题选择样式 */
+.theme-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 8px;
+    margin: 16px 0;
+}
+
+.theme-item {
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    transition: all 0.3s;
+}
+
+.theme-item.active {
+    border-color: var(--theme-primary);
+    transform: scale(0.95);
+}
+
+.theme-colors {
+    height: 48px;
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+}
+
+.color {
+    flex: 1;
+    transition: opacity 0.3s;
+}
+
+.theme-name {
+    text-align: center;
+    margin-top: 4px;
+    font-size: 0.8em;
+    color: #666;
+}
+
+/* 导出按钮样式 */
+.export-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.export-actions button {
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.export-actions button i {
+    font-size: 16px;
+    margin-right: 4px;
+}
+
+/* 预览包装器样式 */
+.preview-wrapper {
+    margin-top: 24px;
+    padding: 16px;
+    background: #f5f5f5;
+    border-radius: 8px;
+}
+
+.preview-header {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 16px;
+    padding-left: 8px;
+}
+
+.preview-section {
+    background: #fff;
+    padding: 16px;
+    border-radius: 8px;
+}
+
+/* 删除毛玻璃相关样式 */
+.effect-options {
+    display: none;
+}
+</style>
+
+<script>
+function updatePreview() {
+    const preview = document.querySelector('.preview-card');
+    const radius = document.querySelector('[name="card_radius"]').value;
+    const opacity = document.querySelector('[name="card_opacity"]').value;
+    const navOpacity = document.querySelector('[name="nav_opacity"]').value;
+    const drawerOpacity = document.querySelector('[name="drawer_opacity"]').value;
+    
+    preview.style.borderRadius = radius + 'px';
+    preview.style.opacity = opacity / 100;
+    
+    document.getElementById('radius-value').textContent = radius;
+    document.getElementById('opacity-value').textContent = opacity;
+    document.getElementById('nav-opacity-value').textContent = navOpacity;
+    document.getElementById('drawer-opacity-value').textContent = drawerOpacity;
+    
+    document.documentElement.style.setProperty('--nav-opacity', navOpacity / 100);
+    document.documentElement.style.setProperty('--drawer-opacity', drawerOpacity / 100);
+}
+
+let hasUnsavedChanges = false;
+
+function setTheme(primary, accent) {
+    document.documentElement.style.setProperty('--theme-primary', primary);
+    document.documentElement.style.setProperty('--theme-accent', accent);
+    
+    // 更新预览和选中状态
+    document.querySelectorAll('.theme-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    event.currentTarget.classList.add('active');
+    
+    updatePreview();
+    hasUnsavedChanges = true;
+}
+
+// 添加页面离开提示
+window.addEventListener('beforeunload', (e) => {
+    if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
+});
+
+// 保存设置后清除未保存标记
+async function saveAllSettings() {
+    try {
+        const formData = new FormData();
+        const avatarInput = document.getElementById('avatar-input');
+        
+        if (avatarInput.files.length > 0) {
+            formData.append('avatar', avatarInput.files[0]);
+        }
+        
+        formData.append('nickname', document.querySelector('[name="nickname"]').value);
+        // ... 其他设置项 ...
+        formData.append('nav_opacity', document.querySelector('[name="nav_opacity"]').value);
+        formData.append('drawer_opacity', document.querySelector('[name="drawer_opacity"]').value);
+        
+        const response = await fetch('/api/settings/profile', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            hasUnsavedChanges = false;  // 保存成功后重置状态
+            mdui.snackbar({
+                message: '设置已保存',
+                timeout: 2000,
+                onClose: () => location.reload()
+            });
+        } else {
+            throw new Error(result.error || '保存失败');
+        }
+    } catch (error) {
+        mdui.snackbar({message: error.message || '保存失败，请重试'});
+    }
+}
+
+// 路由切换前检查
+document.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', (e) => {
+        if (hasUnsavedChanges) {
+            const confirmed = confirm('有未保存的更改，确定要离开吗？');
+            if (!confirmed) {
+                e.preventDefault();
+            } else {
+                hasUnsavedChanges = false;  // 用户确认离开，重置状态
+            }
+        }
+    });
+});
+
+// 头像上传预览
+document.getElementById('avatar-input').addEventListener('change', function(e) {
+    if (this.files && this.files[0]) {
+        const file = this.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            // 更新头像预览
+            const avatarBox = document.querySelector('.avatar-box');
+            avatarBox.innerHTML = `
+                <img src="${e.target.result}" alt="头像">
+                <div class="avatar-overlay">
+                    <i class="mdui-icon material-icons">photo_camera</i>
+                </div>
+            `;
+        };
+        
+        reader.readAsDataURL(file);
+    }
+});
+
+// 保存设置
+document.getElementById('profile-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    try {
+        const response = await fetch('/api/settings/profile', {
+            method: 'POST',
+            body: formData
+        });
+        const result = await response.json();
+        if (result.success) {
+            mdui.snackbar({message: '个人资料已更新'});
+        }
+    } catch (error) {
+        mdui.snackbar({message: '保存失败，请重试'});
+    }
+});
+
+document.getElementById('theme-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    try {
+        const response = await fetch('/api/settings/theme', {
+            method: 'POST',
+            body: formData
+        });
+        const result = await response.json();
+        if (result.success) {
+            mdui.snackbar({
+                message: '界面设置已更新',
+                onClose: () => location.reload()
+            });
+        }
+    } catch (error) {
+        mdui.snackbar({message: '保存失败，请重试'});
+    }
+});
+
+async function exportData(format) {
+    const url = `/api/export/diary?format=${format}`;
+    window.location.href = url;
+}
+
+function linkGithub() {
+    window.location.href = '/login/github';
+}
+
+function setThemeColor(color) {
+    document.documentElement.style.setProperty('--theme-color', color);
+    document.querySelectorAll('.theme-color-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.currentTarget.classList.add('active');
+}
+
+function setCardColor(color) {
+    document.documentElement.style.setProperty('--card-color', color);
+    document.querySelectorAll('.card-color-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.currentTarget.classList.add('active');
+    updatePreview();
+}
+
+async function saveSettings() {
+    // ...existing code...
+}
+
+function setTheme(theme) {
+    const previewCard = document.getElementById('preview-card');
+    if (theme === 'dark') {
+        previewCard.style.backgroundColor = '#303030';
+        previewCard.style.color = '#FFFFFF';
+        document.documentElement.style.setProperty('--theme-color', '#BB86FC');
+    } else {
+        previewCard.style.backgroundColor = '#FFFFFF';
+        previewCard.style.color = '#000000';
+        document.documentElement.style.setProperty('--theme-color', '#2196F3');
+    }
+    
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.classList.remove('mdui-color-theme');
+    });
+    event.currentTarget.classList.add('mdui-color-theme');
+}
+
+// 初始化
+document.addEventListener('DOMContentLoaded', function() {
+    mdui.mutation();
+    updatePreview();
+});
+
+async function exportDiary(format) {
+    try {
+        const response = await fetch(`/api/export/diary?format=${format}`);
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `diary_export.${format}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            mdui.snackbar({message: '导出成功'});
+        } else {
+            throw new Error('导出失败');
+        }
+    } catch (error) {
+        mdui.snackbar({message: '导出失败，请重试'});
+    }
+}
+
+async function exportSelected(format) {
+    const selected = Array.from(document.querySelectorAll('[name="diary"]:checked'))
+        .map(cb => cb.value);
+    if (selected.length === 0) {
+        mdui.snackbar({message: '请选择要导出的日记'});
+        return;
+    }
+    const startDate = document.querySelector('[name="start_date"]').value;
+    const endDate = document.querySelector('[name="end_date"]').value;
+    try {
+        const response = await fetch(`/api/export/diary?format=${format}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                diaries: selected,
+                start_date: startDate,
+                end_date: endDate
+            })
+        });
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `diary_export_${new Date().toISOString().split('T')[0]}.${format}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            mdui.snackbar({message: '导出成功'});
+        } else {
+            throw new Error('导出失败');
+        }
+    } catch (error) {
+        mdui.snackbar({message: '导出失败，请重试'});
+    }
+}
+
+async function loadExportableDiaries() {
+    try {
+        const response = await fetch('/api/diaries');
+        const diaries = await response.json();
+        const container = document.getElementById('exportable-diaries');
+        container.innerHTML = diaries.map(diary => `
+            <div class="diary-export-item">
+                <label class="mdui-checkbox">
+                    <input type="checkbox" name="diary" value="${diary.id}"/>
+                    <i class="mdui-checkbox-icon"></i>
+                    <span class="mdui-m-l-2">${diary.title} - ${new Date(diary.created_at).toLocaleDateString()}</span>
+                </label>
+            </div>
+        `).join('');
+        document.getElementById('select-all').addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('[name="diary"]');
+            checkboxes.forEach(cb => cb.checked = this.checked);
+        });
+    } catch (error) {
+        mdui.snackbar({message: '加载日记列表失败'});
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadExportableDiaries();
+    document.querySelector('.avatar-wrapper').addEventListener('click', function() {
+        document.getElementById('avatar-input').click();
+    });
+
+    // 密码验证
+    const form = document.querySelector('form');
+    const currentPassword = document.querySelector('[name="current_password"]');
+    const newPassword = document.querySelector('[name="new_password"]');
+    const confirmPassword = document.querySelector('[name="confirm_password"]');
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        if (newPassword.value) {
+            if (!currentPassword.value) {
+                mdui.snackbar({message: '请输入当前密码'});
+                return;
+            }
+            if (newPassword.value !== confirmPassword.value) {
+                mdui.snackbar({message: '两次输入的新密码不一致'});
+                return;
+            }
+        }
+        
+        await saveAllSettings();
+    });
+});
+
+// 修改设置主题的函数
+function setTheme(primary, accent) {
+    document.documentElement.style.setProperty('--theme-primary', primary);
+    document.documentElement.style.setProperty('--theme-accent', accent);
+    
+    // 更新选中状态
+    document.querySelectorAll('.theme-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    event.currentTarget.classList.add('active');
+    
+    hasUnsavedChanges = true;
+}
+
+// 页面加载时设置当前主题的选中状态
+document.addEventListener('DOMContentLoaded', function() {
+    // 获取当前主题颜色
+    const currentTheme = getComputedStyle(document.documentElement)
+        .getPropertyValue('--theme-primary').trim();
+    
+    // 设置对应主题选项的选中状态
+    document.querySelectorAll('.theme-item').forEach(item => {
+        const themeColor = item.querySelector('.color.primary').style.backgroundColor;
+        if (themeColor === currentTheme) {
+            item.classList.add('active');
+        }
+    });
+    
+    // ...existing code...
+});
+
+// 页面加载时或更改主题时设置hasUnsavedChanges为false
+document.addEventListener('DOMContentLoaded', function() {
+    hasUnsavedChanges = false;
+    // ...existing initialization code...
+});
+
+</script>
+{% endblock %}
