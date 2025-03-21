@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}主页设置{% endblock %}
+{% block content %}
+<div class="settings-container">
+    <div class="mdui-tab mdui-tab-full-width" mdui-tab>
+        <a href="#guest-settings" class="mdui-ripple">未登录页面设置</a>
+        <a href="#user-settings" class="mdui-ripple">已登录页面设置</a>
+    </div>
+
+    <div id="guest-settings" class="settings-section">
+        <div class="mdui-card">
+            <div class="mdui-card-primary">
+                <div class="mdui-card-primary-title">未登录页面设置</div>
+            </div>
+            <div class="mdui-card-content">
+                <!-- 网站统计卡片设置 -->
+                <div class="mdui-panel" mdui-panel>
+                    <div class="mdui-panel-item">
+                        <div class="mdui-panel-item-header">
+                            <div class="mdui-panel-item-title">网站统计卡片设置</div>
+                            <i class="mdui-panel-item-arrow mdui-icon material-icons">keyboard_arrow_down</i>
+                        </div>
+                        <div class="mdui-panel-item-body">
+                            <!-- 统计项目设置 -->
+                            <div class="mdui-textfield">
+                                <label class="mdui-textfield-label">显示项目</label>
+                                <div class="stat-items-config">
+                                    <label class="mdui-checkbox">
+                                        <input type="checkbox" name="show_runtime" checked/>
+                                        <i class="mdui-checkbox-icon"></i>
+                                        运行时间
+                                    </label>
+                                    <label class="mdui-checkbox">
+                                        <input type="checkbox" name="show_users" checked/>
+                                        <i class="mdui-checkbox-icon"></i>
+                                        注册用户数
+                                    </label>
+                                    <label class="mdui-checkbox">
+                                        <input type="checkbox" name="show_diaries" checked/>
+                                        <i class="mdui-checkbox-icon"></i>
+                                        日记总数
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- 卡片样式设置 -->
+                            <div class="mdui-textfield">
+                                <label class="mdui-textfield-label">卡片样式</label>
+                                <select class="mdui-select" name="card_style" mdui-select>
+                                    <option value="default">默认</option>
+                                    <option value="glass">毛玻璃</option>
+                                    <option value="gradient-border">渐变边框</option>
+                                </select>
+                            </div>
+
+                            <!-- 网站信息设置 -->
+                            <div class="mdui-textfield">
+                                <label class="mdui-textfield-label">ICP备案号</label>
+                                <input class="mdui-textfield-input" type="text" name="icp"
+                                       value="{{ settings.guest.icp }}"
+                                       placeholder="例如：京ICP备12345678号"/>
+                            </div>
+
+                            <div class="mdui-textfield">
+                                <label class="mdui-textfield-label">版权信息</label>
+                                <input class="mdui-textfield-input" type="text" name="copyright"
+                                       value="{{ settings.guest.copyright }}"
+                                       placeholder="例如：© 2024 我的日记. All rights reserved."/>
+                            </div>
+
+                            <!-- 网站运行时间设置 -->
+                            <div class="mdui-textfield">
+                                <label class="mdui-textfield-label">网站开始运行时间</label>
+                                <input class="mdui-textfield-input" type="date" name="start_date"
+                                       value="{{ settings.guest.start_date }}"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mdui-textfield">
+                    <label class="mdui-textfield-label">弹幕内容</label>
+                    <textarea class="mdui-textfield-input" name="danmaku_words" rows="4" 
+                              placeholder="每行一个弹幕内容">{{ settings.guest.danmaku_words }}</textarea>
+                    <div class="mdui-textfield-helper">每行输入一条弹幕内容</div>
+                </div>
+                
+                <div class="mdui-textfield">
+                    <label class="mdui-textfield-label">欢迎标语</label>
+                    <input class="mdui-textfield-input" type="text" name="welcome_text"
+                           value="{{ settings.guest.welcome_text }}">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="user-settings" class="settings-section">
+        <div class="mdui-card">
+            <div class="mdui-card-primary">
+                <div class="mdui-card-primary-title">已登录页面设置</div>
+            </div>
+            <div class="mdui-card-content">
+                <div class="mdui-textfield">
+                    <label class="mdui-textfield-label">欢迎标语</label>
+                    <input class="mdui-textfield-input" type="text" name="user_welcome_text"
+                           value="{{ settings.user.welcome_text }}">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button onclick="saveSettings()" 
+            class="mdui-fab mdui-fab-fixed mdui-ripple mdui-color-theme-accent">
+        <i class="mdui-icon material-icons">save</i>
+    </button>
+</div>
+
+<style>
+.settings-container {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 0 20px;
+}
+
+.settings-section {
+    margin-top: 20px;
+}
+
+.mdui-card {
+    margin-bottom: 20px;
+}
+
+.stat-items-config {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin: 8px 0;
+}
+
+.mdui-panel-item-body {
+    padding: 16px;
+}
+</style>
+
+<script>
+async function saveSettings() {
+    const formData = {
+        guest: {
+            danmaku_words: document.querySelector('[name="danmaku_words"]').value.split('\n'),
+            welcome_text: document.querySelector('[name="welcome_text"]').value,
+            stats_card: {
+                show_runtime: document.querySelector('[name="show_runtime"]').checked,
+                show_users: document.querySelector('[name="show_users"]').checked,
+                show_diaries: document.querySelector('[name="show_diaries"]').checked,
+                card_style: document.querySelector('[name="card_style"]').value,
+                start_date: document.querySelector('[name="start_date"]').value
+            },
+            icp: document.querySelector('[name="icp"]').value,
+            copyright: document.querySelector('[name="copyright"]').value
+        },
+        user: {
+            welcome_text: document.querySelector('[name="user_welcome_text"]').value
+        }
+    };
+
+    try {
+        const response = await fetch('/api/admin/settings/homepage', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(formData)
+        });
+        
+        if (response.ok) {
+            mdui.snackbar({message: '设置已保存'});
+        } else {
+            throw new Error('保存失败');
+        }
+    } catch (error) {
+        mdui.snackbar({message: '保存失败，请重试'});
+    }
+}
+</script>
+{% endblock %}
