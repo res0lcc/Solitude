@@ -1,0 +1,330 @@
+{% extends "base.html" %}
+{% block title %}日记管理{% endblock %}
+{% block page_title %}日记管理{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="mdui-card diary-card">
+        <div class="grid-container">
+            {% for diary in diaries %}
+            <div class="diary-item">
+                <div class="diary-header">
+                    <div class="author-info">
+                        <i class="mdui-icon material-icons">account_circle</i>
+                        {{ diary.user.nickname or diary.user.username }}
+                    </div>
+                    <div class="diary-date">
+                        <i class="mdui-icon material-icons">event</i>
+                        {{ diary.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                    </div>
+                </div>
+                <div class="diary-content">
+                    {{ diary.content[:200] + '...' if diary.content|length > 200 else diary.content }}
+                </div>
+                <div class="diary-footer">
+                    <span class="status-badge {% if diary.is_public %}public{% else %}private{% endif %}">
+                        {{ '公开' if diary.is_public else '私密' }}
+                    </span>
+                    <button class="mdui-btn mdui-btn-icon mdui-ripple mdui-btn-raised mdui-color-red delete-btn" 
+                            onclick="deleteDiary({{ diary.id }})">
+                        <i class="mdui-icon material-icons">delete</i>
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<style>
+.admin-container {
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 16px;
+}
+
+.mdui-card {
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+/* 防止表格横向滚动 */
+.table-container {
+    overflow-x: auto;
+    padding-bottom: 16px;
+}
+
+/* 优化表格布局 */
+.mdui-table {
+    min-width: 100%;
+    border-spacing: 0;
+}
+
+.mdui-table td, .mdui-table th {
+    padding: 12px 8px;
+}
+
+/* ID列固定宽度 */
+.mdui-table td:first-child {
+    width: 60px;
+}
+
+/* 作者列固定宽度 */
+.mdui-table td:nth-child(2) {
+    width: 120px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 时间列固定宽度 */
+.mdui-table td:nth-child(3) {
+    width: 160px;
+    white-space: nowrap;
+}
+
+/* 内容预览列自适应 */
+.diary-preview {
+    max-width: none;
+}
+
+.preview-content {
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 状态列固定宽度 */
+.mdui-table td:nth-child(5) {
+    width: 80px;
+    text-align: center;
+}
+
+/* 操作列固定宽度 */
+.mdui-table td:last-child {
+    width: 80px;
+    text-align: right;
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+.mdui-table {
+    min-width: 800px;
+}
+
+.diary-preview {
+    max-width: 300px;
+}
+
+.preview-content {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 8px 0;
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+.status-badge.public {
+    background-color: var(--theme-primary);
+    color: white;
+}
+
+.status-badge.private {
+    background-color: #9e9e9e;
+    color: white;
+}
+
+.delete-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px !important;
+    margin: 0 4px;
+    padding: 0 !important;
+}
+
+.delete-btn .mdui-icon {
+    font-size: 20px;
+}
+
+/* 响应式布局优化 */
+@media (max-width: 768px) {
+    .preview-content {
+        max-width: 200px;
+    }
+    
+    .mdui-table td:nth-child(2) {
+        width: 100px;
+    }
+    
+    .mdui-table td:nth-child(3) {
+        width: 120px;
+    }
+    
+    .diary-preview {
+        max-width: 200px;
+    }
+    
+    .mdui-card-primary-title {
+        font-size: 20px;
+    }
+    
+    .mdui-card-primary-subtitle {
+        font-size: 14px;
+    }
+}
+
+/* 添加警告对话框样式 */
+.dialog-content {
+    text-align: center;
+    padding: 24px;
+}
+
+.warning-icon {
+    color: #ff5252;
+    margin-bottom: 16px;
+}
+
+.warning-icon .mdui-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+}
+
+.warning-title {
+    font-size: 18px;
+    font-weight: 500;
+    margin-bottom: 16px;
+}
+
+.warning-text {
+    color: #666;
+    line-height: 1.6;
+    text-align: left;
+}
+
+/* 让管理卡片使用用户自定义样式 */
+.diary-card {
+    border-radius: var(--card-radius) !important;
+    opacity: var(--card-opacity) !important;
+}
+
+/* 网格布局 */
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+    padding: 16px;
+}
+
+.diary-item {
+    background: white;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.diary-header {
+    margin-bottom: 12px;
+}
+
+.author-info, .diary-date {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.diary-content {
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 12px 0;
+    color: #333;
+    display: -webkit-box;
+    -webkit-line-clamp: 5;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.diary-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 12px;
+}
+
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+.delete-btn {
+    width: 32px;
+    height: 32px;
+    min-width: 32px !important;
+}
+</style>
+
+<script>
+function deleteDiary(diaryId) {
+    mdui.dialog({
+        title: '确认删除',
+        content: `
+            <div class="dialog-content">
+                <div class="warning-icon"><i class="mdui-icon material-icons">warning</i></div>
+                <div class="warning-title">确定要删除这篇日记吗？</div>
+                <div class="warning-text">此操作不可恢复！</div>
+            </div>
+        `,
+        buttons: [
+            { text: '取消' },
+            {
+                text: '确认删除',
+                bold: true,
+                close: false,
+                onClick: async function(inst) {
+                    try {
+                        const response = await fetch(`/api/admin/diary/${diaryId}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            }
+                        });
+                        
+                        const data = await response.json();
+                        if (data.success) {
+                            inst.close();
+                            mdui.snackbar({
+                                message: '日记删除成功！',
+                                timeout: 2000,
+                                onClose: () => window.location.reload()
+                            });
+                        } else {
+                            throw new Error(data.error || '删除失败');
+                        }
+                    } catch (error) {
+                        mdui.snackbar({
+                            message: error.message || '删除失败，请重试',
+                            timeout: 3000
+                        });
+                    }
+                }
+            }
+        ],
+        modal: true,
+        closeOnEsc: false
+    });
+}
+</script>
+{% endblock %}

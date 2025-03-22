@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{% block title %}我的日记{% endblock %}</title>
+    <link rel="stylesheet" href="https://unpkg.com/mdui@1.0.2/dist/css/mdui.min.css"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}"/>
+    <!-- 添加全局CSS变量 -->
+    <style>
+        :root {
+            --theme-color: #2196F3;
+            --theme-color-rgb: 33, 150, 243;  /* 添加RGB值变量 */
+            --theme-color-light: rgba(33, 150, 243, 0.1);
+            --theme-color-dark: #1976D2;
+            --text-primary: rgba(0, 0, 0, 0.87);
+            --text-secondary: rgba(0, 0, 0, 0.54);
+            --surface-color: #FFFFFF;
+            --border-color: rgba(0, 0, 0, 0.08);
+            {% if current_user.is_authenticated %}
+                {% if session.get('theme_settings') %}
+                    --theme-primary: {{ session['theme_settings']['primary_color'] }};
+                    --theme-accent: {{ session['theme_settings']['accent_color'] }};
+                    --card-radius: {{ session['theme_settings']['card_radius'] }}px;
+                    --card-opacity: {{ session['theme_settings']['card_opacity'] / 100 }};
+                {% endif %}
+            {% else %}
+                --theme-primary: #2196F3;
+                --theme-accent: #448AFF;
+                --card-radius: 8px;
+                --card-opacity: 1;
+            {% endif %}
+            {% if current_user.is_authenticated %}
+                {% if current_user.settings %}
+                    --theme-primary: {{ current_user.settings.theme_settings.primary_color }};
+                    --theme-accent: {{ current_user.settings.theme_settings.accent_color }};
+                    --card-radius: {{ current_user.settings.theme_settings.card_radius }}px;
+                    --card-opacity: {{ current_user.settings.theme_settings.card_opacity / 100 }};
+                {% else %}
+                    --theme-primary: #2196F3;
+                    --theme-accent: #448AFF;
+                    --card-radius: 8px;
+                    --card-opacity: 1;
+                {% endif %}
+            {% endif %}
+        }
+        @font-face {
+            font-family: '975HazyGothic SC';
+            src: url("{{ url_for('static', filename='fonts/975HazyGothicSC-Bold.ttf') }}") format("truetype");
+        }
+        @font-face {
+            font-family: '975HazyGothic SC Regular';
+            src: url("{{ url_for('static', filename='fonts/975HazyGothicSC-Regular.ttf') }}") format("truetype");
+            font-weight: normal;
+            font-style: normal;
+        }
+        
+        @font-face {
+            font-family: '975HazyGothic SC Medium';
+            src: url("{{ url_for('static', filename='fonts/975HazyGothicSC-Medium.ttf') }}") format("truetype");
+            font-weight: 500;
+            font-style: normal;
+        }
+        
+        @font-face {
+            font-family: '975HazyGothic SC Bold';
+            src: url("/font/975HazyGothicSC-Bold.ttf") format("truetype");
+            font-weight: bold;
+            font-style: normal;
+        }
+        
+        body {
+            font-family: '975HazyGothic SC Regular', sans-serif;
+        }
+        
+        .mdui-typo-title {
+            font-family: '975HazyGothic SC Medium', sans-serif;
+        }
+        
+        h1, h2, h3, h4, h5, h6, .mdui-card-primary-title {
+            font-family: '975HazyGothic SC Bold', sans-serif;
+        }
+        
+        /* 应用主题色到导航栏 */
+        .mdui-appbar {
+            background-color: var(--theme-primary) !important;
+            color: white !important;
+        }
+        
+        /* 统一卡片样式 */
+        .diary-card {
+            {% if current_user.is_authenticated and current_user.settings %}
+                border-radius: {{ current_user.settings.theme_settings.card_radius }}px;
+                opacity: {{ (current_user.settings.theme_settings.card_opacity|int) / 100 }};
+            {% endif %}
+        }
+        /* 设置基础移动端适配 */
+        @media screen and (max-width: 393px) {
+            .mdui-container {
+                padding: 0 8px;
+            }
+
+            .mdui-drawer {
+                width: 260px; /* 减小抽屉宽度 */
+            }
+
+            .mdui-toolbar {
+                height: 56px; /* 减小导航栏高度 */
+                padding: 0 8px;
+            }
+
+            .mdui-toolbar .mdui-btn-icon {
+                width: 40px;
+                height: 40px;
+                min-width: 40px;
+            }
+
+            .mdui-appbar-with-toolbar {
+                padding-top: 56px;
+            }
+        }
+    </style>
+</head>
+<body class="mdui-appbar-with-toolbar">
+    <header class="mdui-appbar mdui-appbar-fixed">
+        <div class="mdui-toolbar">
+            <a href="javascript:;" class="mdui-btn mdui-btn-icon" mdui-drawer="{target: '#main-drawer', swipe: true}">
+                <i class="mdui-icon material-icons">menu</i>
+            </a>
+            <span class="mdui-typo-title">{% block page_title %}我的日记{% endblock %}</span>
+            <div class="mdui-toolbar-spacer"></div>
+            {% if not current_user.is_authenticated %}
+                <a href="/login" class="mdui-btn mdui-btn-icon" id="loginLink">
+                    <i class="mdui-icon material-icons">account_circle</i>
+                </a>
+            {% else %}
+                <a href="/logout" class="mdui-btn mdui-btn-icon" id="logoutLink">
+                    <i class="mdui-icon material-icons">exit_to_app</i>
+                </a>
+            {% endif %}
+        </div>
+    </header>
+
+    <div class="mdui-drawer" id="main-drawer">
+        {% if current_user.is_authenticated %}
+        <!-- 用户信息区域 -->
+        <div class="drawer-user">
+            <div class="user-avatar">
+                {% if current_user.avatar %}
+                    <img src="{{ current_user.avatar }}" alt="avatar">
+                {% else %}
+                    <img src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%23666' d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>" alt="avatar">
+                {% endif %}
+            </div>
+            <div class="user-info">
+                <div class="username">{{ current_user.nickname or current_user.username }}</div>
+                <div class="user-role">{{ '管理员' if current_user.is_admin else '用户' }}</div>
+            </div>
+        </div>
+        
+        <div class="mdui-divider"></div>
+        {% endif %}
+        
+        <div class="mdui-list nav-list">
+            <!-- 始终显示的选项 -->
+            <a href="/" class="mdui-list-item mdui-ripple">
+                <i class="mdui-list-item-icon mdui-icon material-icons">home</i>
+                <div class="mdui-list-item-content">首页</div>
+            </a>
+            <a href="/wall" class="mdui-list-item mdui-ripple">
+                <i class="mdui-list-item-icon mdui-icon material-icons">public</i>
+                <div class="mdui-list-item-content">日记墙</div>
+            </a>
+
+            {% if current_user.is_authenticated %}
+            <!-- 登录后显示的选项 -->
+            <div class="mdui-divider nav-divider"></div>
+            
+            <div class="nav-section">
+                <div class="nav-section-title">我的日记</div>
+                <a href="/add" class="mdui-list-item mdui-ripple highlight-item">
+                    <i class="mdui-list-item-icon mdui-icon material-icons">add</i>
+                    <div class="mdui-list-item-content">写日记</div>
+                </a>
+                <a href="/mydiary" class="mdui-list-item mdui-ripple">
+                    <i class="mdui-list-item-icon mdui-icon material-icons">book</i>
+                    <div class="mdui-list-item-content">我的日记</div>
+                </a>
+            </div>
+
+            <div class="mdui-divider nav-divider"></div>
+            
+            <div class="nav-section">
+                <div class="nav-section-title">设置</div>
+                <a href="/settings" class="mdui-list-item mdui-ripple">
+                    <i class="mdui-list-item-icon mdui-icon material-icons">settings</i>
+                    <div class="mdui-list-item-content">个人设置</div>
+                </a>
+                <a href="/mydiary" class="mdui-list-item mdui-ripple" onclick="showTrashMessage(event)">
+                    <i class="mdui-list-item-icon mdui-icon material-icons">delete</i>
+                    <div class="mdui-list-item-content">
+                        回收站
+                        <span class="maintenance-badge">维护中</span>
+                    </div>
+                </a>
+            </div>
+
+            {% if current_user.is_admin %}
+                <div class="nav-section">
+                    <div class="nav-section-title">系统管理</div>
+                    <a href="/admin/users" class="mdui-list-item mdui-ripple">
+                        <i class="mdui-list-item-icon mdui-icon material-icons">people</i>
+                        <div class="mdui-list-item-content">用户管理</div>
+                    </a>
+                    <a href="/admin/diaries" class="mdui-list-item mdui-ripple">
+                        <i class="mdui-list-item-icon mdui-icon material-icons">book</i>
+                        <div class="mdui-list-item-content">日记管理</div>
+                    </a>
+                </div>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="mdui-container mdui-m-t-5">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- JavaScript 引用 -->
+    <script src="https://unpkg.com/mdui@1.0.2/dist/js/mdui.min.js"></script>
+    <script src="{{ url_for('static', filename='js/diary.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+
+<style>
+/* 侧边栏样式优化 */
+.mdui-drawer {
+    background-color: #fafafa;
+    border-right: none;
+    box-shadow: 2px 0 8px rgba(0,0,0,0.05);
+}
+
+/* 修改侧边栏用户信息区域样式 */
+.drawer-user {
+    padding: 24px 16px;
+    background: #f8f8f8; /* 改为奶白色 */
+    color: #333; /* 文字改为深色 */
+}
+
+.user-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid rgba(0,0,0,0.08);
+}
+
+.user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.user-avatar i {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    color: #999;
+}
+
+.avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.1);
+}
+
+.avatar-placeholder i {
+    font-size: 32px;
+    color: white;
+}
+
+.user-info {
+    padding: 0 4px;
+}
+
+.username {
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin-bottom: 4px;
+    color: #333;
+}
+
+.user-role {
+    font-size: 0.85rem;
+    opacity: 0.8;
+    color: #666;
+}
+
+.nav-list {
+    padding: 12px 8px;
+}
+
+.nav-section {
+    margin: 8px 0 16px 0;
+}
+
+.nav-section-title {
+    padding: 12px 16px 8px;
+    color: rgba(0,0,0,0.5);
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.mdui-list-item {
+    border-radius: 8px;
+    margin: 4px 0;
+    padding: 12px 16px;
+    transition: all 0.3s;
+}
+
+.mdui-list-item:hover {
+    background-color: rgba(var(--theme-color-rgb), 0.08);
+}
+
+.highlight-item {
+    background-color: var(--theme-color-light);
+    color: var(--theme-color);
+}
+
+.highlight-item:hover {
+    background-color: rgba(var(--theme-color-rgb), 0.15);
+}
+
+.mdui-list-item-icon {
+    color: rgba(0,0,0,0.54);
+    transition: color 0.3s;
+}
+
+.mdui-list-item:hover .mdui-list-item-icon {
+    color: var(--theme-color);
+}
+
+.nav-divider {
+    margin: 12px 0;
+    background-color: rgba(0,0,0,0.08);
+}
+
+.maintenance-badge {
+    font-size: 12px;
+    padding: 2px 6px;
+    background-color: #FF5252;
+    color: white;
+    border-radius: 4px;
+    margin-left: 8px;
+}
+</style>
+
+<script>
+function showTrashMessage(event) {
+    event.preventDefault();  // 阻止默认跳转
+    mdui.snackbar({
+        message: '回收站功能正在维护中，暂时跳转到我的日记页面',
+        timeout: 2000,
+        onClose: () => {
+            window.location.href = '/mydiary';
+        }
+    });
+}
+</script>
+</body>
+</html>

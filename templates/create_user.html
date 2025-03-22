@@ -1,0 +1,394 @@
+{% extends "base.html" %}
+{% block title %}注册 - Solitude{% endblock %}
+{% block page_title %}注册{% endblock %}
+{% block content %}
+<div class="auth-card mdui-card">
+    <div class="mdui-card-primary">
+        <div class="mdui-card-primary-title">注册</div>
+    </div>
+    <div class="mdui-card-content">
+        <form id="registerForm" method="POST">
+            <div class="mdui-textfield">
+                <label class="mdui-textfield-label">昵称</label>
+                <input class="mdui-textfield-input" type="text" name="nickname" required/>
+            </div>
+            <div class="mdui-textfield">
+                <label class="mdui-textfield-label">用户名 (5-12位)</label>
+                <input class="mdui-textfield-input" type="text" name="username" 
+                       minlength="5" maxlength="12" required oninput="checkUsername(this)"/>
+                <div class="mdui-textfield-helper" id="usernameHelper">用户名长度必须在5-12位之间</div>
+            </div>
+            <div class="mdui-textfield">
+                <label class="mdui-textfield-label">密码</label>
+                <input class="mdui-textfield-input" type="password" name="password" 
+                       required oninput="checkPasswordStrength(this)"/>
+                <div class="password-strength">
+                    <div class="strength-bar">
+                        <div id="strengthIndicator"></div>
+                    </div>
+                    <span id="strengthText">密码强度: 弱</span>
+                </div>
+            </div>
+            <div class="mdui-textfield">
+                <label class="mdui-textfield-label">确认密码</label>
+                <input class="mdui-textfield-input" type="password" name="confirmPassword" 
+                       required oninput="validateConfirmPassword(this)"/>
+                <div class="mdui-textfield-helper" id="confirmPasswordHelper"></div>
+            </div>
+            <div class="register-actions">
+                <button class="mdui-btn mdui-btn-raised mdui-ripple mdui-color-theme" 
+                        type="submit" id="submitBtn">注册</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.auth-card {
+    max-width: 400px;
+    margin: 40px auto;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    overflow: hidden;
+    background: white;
+}
+
+.mdui-card-primary {
+    padding: 32px 24px;
+    background: linear-gradient(to right, var(--theme-color), var(--theme-color-light));
+    text-align: center;
+}
+
+.mdui-card-primary-title {
+    color: white;
+    font-size: 24px;
+    margin-bottom: 8px;
+}
+
+.mdui-card-primary-subtitle {
+    color: rgba(255,255,255,0.8);
+}
+
+.mdui-card-content {
+    padding: 24px;
+}
+
+.mdui-textfield {
+    margin-bottom: 24px;
+}
+
+.register-actions {
+    margin-top: 32px;
+    text-align: center;
+}
+
+.register-actions .mdui-btn {
+    width: 100%;
+    height: 44px;
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    margin-bottom: 24px;
+}
+
+.error-message {
+    color: red;
+    margin: 10px 0;
+}
+
+.agreement-text {
+    text-align: center;
+    font-size: 13px;
+    margin-top: 16px;
+}
+
+.agreement-text a {
+    text-decoration: none;
+    color: var(--theme-color);
+}
+
+.password-strength {
+    margin-top: 8px;
+    font-size: 12px;
+}
+
+.strength-bar {
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+    margin-bottom: 4px;
+}
+
+#strengthIndicator {
+    height: 100%;
+    width: 0;
+    border-radius: 2px;
+    transition: all 0.3s;
+}
+
+.strength-weak #strengthIndicator {
+    width: 33%;
+    background: #ff5252;
+}
+
+.strength-medium #strengthIndicator {
+    width: 66%;
+    background: #ffc107;
+}
+
+.strength-strong #strengthIndicator {
+    width: 100%;
+    background: #4caf50;
+}
+</style>
+
+<script>
+let passwordStrength = 'weak';
+let usernameAvailable = false;
+let isUsernameValid = false;
+
+async function checkUsername(username) {
+    if (!username || username.length < 5 || username.length > 12) {
+        return false;
+    }
+    
+    try {
+        const response = await fetch('/api/check_username', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ username: username })
+        });
+        const data = await response.json();
+        return data.available;
+    } catch (error) {
+        console.error('检查用户名出错:', error);
+        return false;
+    }
+}
+
+async function validateUsername(input) {
+    const username = input.value.trim();
+    const helper = document.getElementById('usernameHelper');
+    
+    if (!username) {
+        helper.textContent = '请输入用户名';
+        helper.style.color = '#ff5252';
+        usernameAvailable = false;
+        return;
+    }
+    
+    if (username.length < 5 || username.length > 12) {
+        helper.textContent = '用户名长度必须在5-12位之间';
+        helper.style.color = '#ff5252';
+        usernameAvailable = false;
+        return;
+    }
+    
+    if (!/^[a-zA-Z0-9]+$/.test(username)) {
+        helper.textContent = '用户名只能包含字母和数字';
+        helper.style.color = '#ff5252';
+        usernameAvailable = false;
+        return;
+    }
+    
+    const available = await checkUsername(username);
+    if (available) {
+        helper.textContent = '用户名可用';
+        helper.style.color = '#4caf50';
+        usernameAvailable = true;
+    } else {
+        helper.textContent = '用户名已被使用';
+        helper.style.color = '#ff5252';
+        usernameAvailable = false;
+    }
+}
+
+async function checkUsername(input) {
+    const username = input.value.trim();
+    const helper = document.getElementById('usernameHelper');
+    
+    // 清除之前的状态
+    helper.style.color = '';
+    isUsernameValid = false;
+    
+    // 基本格式验证
+    if (!username) {
+        helper.textContent = '请输入用户名';
+        helper.style.color = '#ff5252';
+        return;
+    }
+    
+    if (username.length < 5 || username.length > 12) {
+        helper.textContent = '用户名长度必须在5-12位之间';
+        helper.style.color = '#ff5252';
+        return;
+    }
+    
+    if (!/^[a-zA-Z0-9]+$/.test(username)) {
+        helper.textContent = '用户名只能包含字母和数字';
+        helper.style.color = '#ff5252';
+        return;
+    }
+    
+    try {
+        // 检查用户名是否可用
+        const response = await fetch('/api/check_username', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ username })
+        });
+        
+        const result = await response.json();
+        
+        if (result.available) {
+            helper.textContent = '用户名可用';
+            helper.style.color = '#4caf50';
+            isUsernameValid = true;
+        } else {
+            helper.textContent = '用户名已被使用';
+            helper.style.color = '#ff5252';
+            isUsernameValid = false;
+        }
+    } catch (error) {
+        helper.textContent = '检查用户名失败，请重试';
+        helper.style.color = '#ff5252';
+        isUsernameValid = false;
+    }
+}
+
+// 修改密码强度检测函数
+function checkPasswordStrength(input) {
+    const password = input.value;
+    
+    // 检查密码是否符合要求(英文+数字且不少于5位)
+    const isValid = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{5,}$/.test(password);
+    const strengthBar = document.querySelector('.strength-bar');
+    const strengthText = document.getElementById('strengthText');
+    
+    strengthBar.classList.remove('strength-weak', 'strength-medium', 'strength-strong');
+    
+    if (isValid) {
+        strengthBar.classList.add('strength-strong');
+        strengthText.textContent = '密码可用';
+        strengthText.style.color = '#4caf50';
+        return true;
+    } else {
+        strengthBar.classList.add('strength-weak');
+        strengthText.textContent = '密码必须包含字母和数字，且不少于5位';
+        strengthText.style.color = '#ff5252';
+        return false;
+    }
+}
+
+function validateConfirmPassword(input) {
+    const password = document.querySelector('[name="password"]').value;
+    const helper = document.getElementById('confirmPasswordHelper');
+    
+    if (input.value === password) {
+        helper.textContent = '密码匹配';
+        helper.style.color = '#4caf50';
+        return true;
+    } else {
+        helper.textContent = '密码不匹配';
+        helper.style.color = '#ff5252';
+        return false;
+    }
+}
+
+// 修改表单提交验证
+document.getElementById('registerForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    // 获取密码值
+    const password = document.querySelector('[name="password"]').value;
+    
+    // 验证密码格式
+    if (!/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{5,}$/.test(password)) {
+        mdui.snackbar({
+            message: '密码必须包含字母和数字，且不少于5位',
+            timeout: 2000
+        });
+        return;
+    }
+    
+    // 验证密码匹配
+    const confirmPassword = document.querySelector('[name="confirmPassword"]').value;
+    if (password !== confirmPassword) {
+        mdui.snackbar({
+            message: '两次输入的密码不一致',
+            timeout: 2000
+        });
+        return;
+    }
+
+    // ...其余代码保持不变...
+
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = '注册中...';
+    
+    try {
+        const formData = new FormData(this);
+        
+        const response = await fetch('/create_user', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+            mdui.snackbar({
+                message: '注册成功！正在跳转到登录页面...',
+                timeout: 1500,
+                onClose: () => {
+                    window.location.href = '/login';
+                }
+            });
+        } else {
+            mdui.snackbar({
+                message: result.message || '注册失败，请重试',
+                timeout: 2000
+            });
+        }
+    } catch (error) {
+        console.error('注册错误:', error);
+        mdui.snackbar({
+            message: '系统错误，请稍后重试',
+            timeout: 2000
+        });
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '注册';
+    }
+});
+
+function showTerms() {
+    mdui.dialog({
+        title: '用户协议',
+        content: '懒得写',
+        buttons: [
+            {
+                text: '关闭'
+            }
+        ]
+    });
+}
+
+function showPrivacy() {
+    mdui.dialog({
+        title: '隐私政策',
+        content: '也懒得写',
+        buttons: [
+            {
+                text: '关闭'
+            }
+        ]
+    });
+}
+</script>
+{% endblock %}

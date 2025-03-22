@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}编辑日记{% endblock %}
+{% block page_title %}编辑日记{% endblock %}
+{% block content %}
+<div class="diary-container">
+    <div class="mdui-card diary-card">
+        <div class="mdui-card-content">
+            <form id="editForm" onsubmit="updateDiary(event)">
+                <div class="diary-header">
+                    <div class="date-section">
+                        <i class="mdui-icon material-icons">event</i>
+                        <input type="date" name="date" 
+                               value="{{ diary.created_at.strftime('%Y-%m-%d') }}" 
+                               class="date-input">
+                    </div>
+                    <div class="mood-section">
+                        <i class="mdui-icon material-icons">mood</i>
+                        <select name="mood" class="mood-select mdui-select">
+                            <option value="开心" {% if diary.mood == '开心' %}selected{% endif %}>开心</option>
+                            <option value="平静" {% if diary.mood == '平静' %}selected{% endif %}>平静</option>
+                            <option value="伤心" {% if diary.mood == '伤心' %}selected{% endif %}>伤心</option>
+                            <option value="生气" {% if diary.mood == '生气' %}selected{% endif %}>生气</option>
+                            <option value="疲惫" {% if diary.mood == '疲惫' %}selected{% endif %}>疲惫</option>
+                        </select>
+                    </div>
+                    <div class="location-section">
+                        <i class="mdui-icon material-icons">location_on</i>
+                        <input type="text" name="location" 
+                               value="{{ diary.location or '' }}"
+                               placeholder="输入位置" 
+                               class="location-input">
+                    </div>
+                </div>
+
+                <div class="content-section">
+                    <textarea class="mdui-textfield-input diary-content" 
+                              name="content" rows="8">{{ diary.content }}</textarea>
+                </div>
+
+                <div class="diary-footer">
+                    <label class="mdui-checkbox">
+                        <input type="checkbox" name="is_public" 
+                               {% if diary.is_public %}checked{% endif %}/>
+                        <i class="mdui-checkbox-icon"></i>
+                        公开发布到日记墙
+                    </label>
+                    <div class="button-group">
+                        <button type="button" 
+                                onclick="deleteDiary({{ diary.id }})" 
+                                class="mdui-btn mdui-btn-raised mdui-ripple mdui-color-red">
+                            删除
+                        </button>
+                        <button type="submit" 
+                                class="mdui-btn mdui-btn-raised mdui-ripple mdui-color-theme-accent">
+                            保存修改
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+// ... [与 add.html 相同的样式] ...
+
+.button-group {
+    display: flex;
+    gap: 16px;
+}
+</style>
+
+<script>
+async function updateDiary(event) {
+    event.preventDefault();
+    const form = event.target;
+    const data = {
+        date: form.date.value,
+        content: form.content.value,
+        mood: form.mood.value,
+        location: form.location.value,
+        is_public: form.is_public.checked
+    };
+
+    // 显示加载中提示
+    const loadingDialog = mdui.dialog({
+        title: '保存中...',
+        content: '<div class="mdui-spinner"></div>',
+        buttons: [],
+        closeOnEsc: false,
+        closeOnConfirm: false,
+        closeOnCancel: false,
+    });
+    mdui.mutation();
+
+    try {
+        const response = await fetch('/edit/{{ diary.id }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        loadingDialog.close();
+        const result = await response.json();
+        
+        if (result.success) {
+            mdui.dialog({
+                title: '保存成功',
+                content: data.is_public ? '日记已更新并发布到日记墙' : '日记已更新',
+                buttons: [
+                    {
+                        text: '确定',
+                        onClick: function() {
+                            window.location.href = '/mydiary';
+                        }
+                    }
+                ],
+                closeOnEsc: false
+            });
+        } else {
+            throw new Error(result.error || '保存失败');
+        }
+    } catch (error) {
+        loadingDialog.close();
+        mdui.dialog({
+            title: '保存失败',
+            content: error.message || '请稍后重试',
+            buttons: [
+                {
+                    text: '确定'
+                }
+            ]
+        });
+    }
+}
+
+function deleteDiary(id) {
+    mdui.confirm('确定要删除这篇日记吗？', '提示', async function() {
+        try {
+            const response = await fetch(`/api/diary/${id}`, {
+                method: 'DELETE'
+            });
+            const result = await response.json();
+            if (result.success) {
+                mdui.snackbar({
+                    message: '删除成功！',
+                    onClose: () => window.location.href = '/mydiary'
+                });
+            } else {
+                throw new Error(result.error);
+            }
+        } catch (error) {
+            mdui.snackbar({
+                message: '删除失败：' + error.message
+            });
+        }
+    });
+}
+</script>
+{% endblock %}

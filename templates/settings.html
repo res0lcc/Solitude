@@ -1,0 +1,872 @@
+{% extends "base.html" %}
+{% block title %}个人设置{% endblock %}
+{% block page_title %}个人设置{% endblock %}
+{% block content %}
+<div class="settings-container">
+    <!-- 个人资料卡片 -->
+    <div class="mdui-card settings-card profile-card">
+        <div class="mdui-card-primary">
+            <div class="mdui-card-primary-title">基础信息</div>
+        </div>
+        <div class="mdui-card-content">
+            <div class="profile-section">
+                <div class="profile-header">
+                    <div class="avatar-section" onclick="document.getElementById('avatar-input').click()">
+                        <div class="avatar-box">
+                            {% if current_user.avatar %}
+                                <img src="{{ current_user.avatar }}" class="user-avatar" alt="头像">
+                            {% else %}
+                                <i class="mdui-icon material-icons">account_circle</i>
+                            {% endif %}
+                            <div class="avatar-overlay">
+                                <i class="mdui-icon material-icons">photo_camera</i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="profile-info">
+                        <div class="mdui-textfield">
+                            <label class="mdui-textfield-label">昵称</label>
+                            <input class="mdui-textfield-input" type="text" name="nickname" value="{{ current_user.nickname or '' }}" required/>
+                        </div>
+                    </div>
+                </div>
+                <input type="file" id="avatar-input" name="avatar" accept="image/*" hidden>
+            </div>
+
+            <div class="account-section">
+                <div class="mdui-textfield username-field">
+                    <label class="mdui-textfield-label mdui-text-color-black" style="font-size: 16px;">用户名 (5-12位)</label>
+                    <div class="username-input-group">
+                        <input class="mdui-textfield-input" type="text" name="username" 
+                               value="{{ user.username }}"
+                               minlength="5" maxlength="12" 
+                               oninput="validateUsername(this)"
+                               {% if not can_change_username %}disabled{% endif %}/>
+                        <div class="username-status">
+                            <div id="usernameHelper"></div>
+                            {% if can_change_username %}
+                            <span class="username-status-text can-change">可以修改</span>
+                            {% else %}
+                            <span class="username-status-text cannot-change">{{ days_until_change }}天后可修改</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="password-section" style="margin-top: 8px;">
+                    <div class="mdui-textfield">
+                        <label class="mdui-textfield-label mdui-text-color-black" style="font-size: 16px;">当前密码</label>
+                        <input class="mdui-textfield-input" type="password" name="current_password"/>
+                    </div>
+
+                    <div class="mdui-textfield">
+                        <label class="mdui-textfield-label">新密码</label>
+                        <input class="mdui-textfield-input" type="password" name="new_password" 
+                               oninput="checkPasswordStrength(this)"/>
+                        <div class="password-strength">
+                            <div class="strength-bar">
+                                <div id="strengthIndicator"></div>
+                            </div>
+                            <span id="strengthText"></span>
+                        </div>
+                    </div>
+
+                    <div class="mdui-textfield">
+                        <label class="mdui-textfield-label">确认新密码</label>
+                        <input class="mdui-textfield-input" type="password" name="confirm_password"
+                               oninput="validateConfirmPassword(this)"/>
+                        <div class="mdui-textfield-helper" id="confirmPasswordHelper"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- 界面设置卡片 -->
+    <div class="mdui-card settings-card">
+        <div class="mdui-card-primary">
+            <div class="mdui-card-primary-title">主题配色</div>
+            <div class="mdui-card-primary-subtitle">选择你喜欢的主题颜色</div>
+        </div>
+        <div class="mdui-card-content">
+            <div class="theme-grid">
+                {% set themes = [
+                    {'name': '默认蓝', 'primary': '#2196F3', 'accent': '#448AFF'},
+                    {'name': '清新绿', 'primary': '#4CAF50', 'accent': '#69F0AE'},
+                    {'name': '活力橙', 'primary': '#FF9800', 'accent': '#FFB74D'},
+                    {'name': '浪漫粉', 'primary': '#E91E63', 'accent': '#FF4081'},
+                    {'name': '典雅紫', 'primary': '#9C27B0', 'accent': '#E040FB'},
+                    {'name': '深邃蓝', 'primary': '#3F51B5', 'accent': '#536DFE'},
+                    {'name': '纯净白', 'primary': '#FFFFFF', 'accent': '#EEEEEE'},
+                    {'name': '高贵黑', 'primary': '#000000', 'accent': '#424242'},
+                    {'name': '温和灰', 'primary': '#9E9E9E', 'accent': '#BDBDBD'},
+                    {'name': '温暖棕', 'primary': '#795548', 'accent': '#8D6E63'}
+                ] %}
+                {% for theme in themes %}
+                <div class="theme-item mdui-ripple" onclick="setTheme('{{ theme.primary }}', '{{ theme.accent }}')">
+                    <div class="theme-colors">
+                        <div class="color primary" style="background-color: {{ theme.primary }}"></div>
+                        <div class="color accent" style="background-color: {{ theme.accent }}"></div>
+                    </div>
+                    <div class="theme-name">{{ theme.name }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <!-- 卡片样式设置 -->
+    <div class="mdui-card settings-card">
+        <div class="mdui-card-primary">
+            <div class="mdui-card-primary-title">样式设置</div>
+            <div class="mdui-card-primary-subtitle">自定义界面显示效果</div>
+        </div>
+        <div class="mdui-card-content">
+            <div class="mdui-row">
+                <div class="mdui-col-xs-12">
+                    <div class="setting-item">
+                        <label>导航栏不透明度 (<span id="nav-opacity-value">{{ current_settings.nav_opacity if current_settings else 100 }}</span>%)</label>
+                        <label class="mdui-slider mdui-slider-discrete">
+                            <input type="range" name="nav_opacity" min="0" max="100" 
+                                   value="{{ current_settings.nav_opacity if current_settings else 100 }}" 
+                                   step="1" onInput="updatePreview()"/>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mdui-row">
+                <div class="mdui-col-xs-12 mdui-col-sm-6">
+                    <div class="setting-item">
+                        <label>圆角大小 (<span id="radius-value">{{ current_settings.card_radius if current_settings else 8 }}</span>px)</label>
+                        <label class="mdui-slider mdui-slider-discrete">
+                            <input type="range" name="card_radius" min="0" max="20" 
+                                   value="{{ current_settings.card_radius if current_settings else 8 }}" 
+                                   step="1" onInput="updatePreview()"/>
+                        </label>
+                    </div>
+                </div>
+                <div class="mdui-col-xs-12 mdui-col-sm-6">
+                    <div class="setting-item">
+                        <label>透明度 (<span id="opacity-value">{{ current_settings.card_opacity if current_settings else 100 }}</span>%)</label>
+                        <label class="mdui-slider mdui-slider-discrete">
+                            <input type="range" name="card_opacity" min="50" max="100" 
+                                   value="{{ current_settings.card_opacity if current_settings else 100 }}" 
+                                   step="1" onInput="updatePreview()"/>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="effect-options">
+                <label class="mdui-checkbox">
+                    <input type="checkbox" name="glass_effect" onchange="updatePreview()"/>
+                    <i class="mdui-checkbox-icon"></i>
+                    毛玻璃效果
+                </label>
+            </div>
+
+            <!-- 预览区域 -->
+            <div class="preview-section">
+                <div class="preview-background-card">
+                    <div class="preview-label">预览效果</div>
+                    <div class="mdui-card preview-card" id="preview-card">
+                        <div class="mdui-card-content">
+                            <div class="preview-date">2024-01-01 星期一</div>
+                            <div class="diary-meta">
+                                <span class="diary-mood">
+                                    <i class="mdui-icon material-icons">mood</i>
+                                    心情愉悦
+                                </span>
+                                <span class="diary-location">
+                                    <i class="mdui-icon material-icons">location_on</i>
+                                    南京，江苏
+                                </span>
+                            </div>
+                            <div class="diary-divider"></div>
+                            <div class="diary-text">
+                                这是一段示例内容，用于预览卡片样式效果。你可以调整上方的设置来查看不同的显示效果。
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- 悬浮保存按钮 -->
+<button class="mdui-fab mdui-fab-fixed mdui-ripple mdui-color-theme-accent" onclick="saveAllSettings()">
+    <i class="mdui-icon material-icons">save</i>
+</button>
+<style>
+/* 容器和卡片基础样式 */
+.settings-container {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 16px;
+}
+
+.settings-card {
+    width: 100%;
+    max-width: 800px;
+    margin: 20px auto;
+    border-radius: 12px;
+    background-color: white;
+}
+
+/* 卡片头部样式 */
+.mdui-card-primary {
+    padding: 20px 24px;
+    background: #f5f5f5 !important;
+}
+
+.mdui-card-primary-title {
+    color: #333 !important;
+    font-size: 18px !重要;
+}
+
+.mdui-card-primary-subtitle {
+    color: #666 !important;
+    font-size: 14px !important;
+}
+
+/* 头像相关样式 */
+.avatar-section {
+    cursor: pointer;
+}
+
+.avatar-box {
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    background: #f5f5f5;
+    overflow: hidden;
+    position: relative;
+}
+
+.avatar-box img,
+.avatar-box i {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.avatar-section:hover .avatar-overlay {
+    opacity: 1;
+}
+
+/* 表单字段样式 */
+.mdui-textfield {
+    margin: 4px 0 !important;
+    padding: 4px 0 !important;
+    min-height: unset;
+}
+
+.mdui-textfield-label {
+    font-size: 14px !important;
+    color: #333 !重要;
+}
+
+/* 主题选择样式 */
+.theme-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 8px;
+    margin: 16px 0;
+}
+
+.theme-item {
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    transition: all 0.3s;
+}
+
+.theme-item.active {
+    border-color: var(--theme-primary);
+    transform: scale(0.95);
+}
+
+.theme-colors {
+    height: 48px;
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+}
+
+.color {
+    flex: 1;
+    transition: opacity 0.3s;
+}
+
+.theme-name {
+    text-align: center;
+    margin-top: 4px;
+    font-size: 0.8em;
+    color: #666;
+}
+
+/* 导出按钮样式 */
+.export-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.export-actions button {
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.export-actions button i {
+    font-size: 16px;
+    margin-right: 4px;
+}
+
+/* 预览包装器样式 */
+.preview-wrapper {
+    margin-top: 24px;
+    padding: 16px;
+    background: #f5f5f5;
+    border-radius: 8px;
+}
+
+.preview-header {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 16px;
+    padding-left: 8px;
+}
+
+.preview-section {
+    padding: 32px;
+    border-radius: 16px;
+    margin-top: 24px;
+}
+
+.preview-background-card {
+    background-color: #f8f8f8;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    position: relative;
+}
+
+.preview-label {
+    position: absolute;
+    top: 12px;
+    left: 24px;
+    color: #666;
+    font-size: 14px;
+}
+
+.preview-card {
+    margin-top: 24px;
+    background-color: #ffffff;
+    border-radius: var(--card-radius, 12px);
+    opacity: var(--card-opacity, 1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+/* 删除图片相关样式 */
+.preview-card .mdui-card-media {
+    display: none;
+}
+
+.preview-card .mdui-card-content {
+    padding: 20px;
+}
+
+.diary-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+    color: rgba(0,0,0,0.5); /* 改为更浅的颜色 */
+    font-size: 0.85rem; /* 缩小字体 */
+}
+
+.diary-meta span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.diary-meta .mdui-icon {
+    font-size: 1.1rem; /* 图标也相应缩小 */
+}
+
+/* 删除毛玻璃相关样式 */
+.effect-options {
+    display: none;
+}
+
+/* 预览日期样式 */
+.preview-date {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 12px;
+    font-weight: 500;
+}
+
+/* 修改导航栏的透明度过渡效果 */
+.mdui-appbar {
+    transition: opacity 0.3s ease;
+}
+
+/* 添加分割线样式 */
+.diary-divider {
+    height: 1px;
+    background-color: rgba(0,0,0,0.08);
+    margin: 12px 0;
+}
+
+/* 用户名状态样式 */
+.username-status {
+    margin-top: 4px;
+    font-size: 12px;
+}
+
+.username-status-text {
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.username-status-text.can-change {
+    color: #4CAF50;
+    background: rgba(76, 175, 80, 0.1);
+}
+
+.username-status-text.cannot-change {
+    color: #FF5252;
+    background: rgba(255, 82, 82, 0.1);
+}
+
+@media screen and (max-width: 393px) {
+    .settings-container {
+        padding: 8px;
+    }
+
+    .settings-card {
+        margin: 12px 0;
+    }
+
+    .theme-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+
+    .theme-item {
+        padding: 4px;
+    }
+
+    .theme-colors {
+        height: 36px;
+    }
+
+    .theme-name {
+        font-size: 12px;
+    }
+
+    .mdui-row {
+        margin: 0 -4px;
+    }
+
+    .mdui-col-xs-12,
+    .mdui-col-sm-6 {
+        padding: 0 4px;
+    }
+
+    .setting-item {
+        margin-bottom: 16px;
+    }
+
+    .preview-section {
+        padding: 16px;
+    }
+    
+    .avatar-box {
+        width: 64px;
+        height: 64px;
+    }
+}
+</style>
+
+<script>
+function updatePreview() {
+    const radius = document.querySelector('[name="card_radius"]').value;
+    const opacity = document.querySelector('[name="card_opacity"]').value;
+    const navOpacity = document.querySelector('[name="nav_opacity"]').value;
+    
+    // 更新卡片样式
+    document.documentElement.style.setProperty('--card-radius', radius + 'px');
+    document.documentElement.style.setProperty('--card-opacity', opacity / 100);
+    
+    // 更新导航栏
+    const appbar = document.querySelector('.mdui-appbar');
+    appbar.style.opacity = navOpacity / 100;
+    
+    // 更新显示的数值
+    document.getElementById('radius-value').textContent = radius;
+    document.getElementById('opacity-value').textContent = opacity;
+    document.getElementById('nav-opacity-value').textContent = navOpacity;
+}
+
+// 初始化时也要调用一次更新
+document.addEventListener('DOMContentLoaded', function() {
+    updatePreview();
+});
+
+let hasUnsavedChanges = false;
+
+function setTheme(primary, accent) {
+    document.documentElement.style.setProperty('--theme-primary', primary);
+    document.documentElement.style.setProperty('--theme-accent', accent);
+    
+    // 更新预览和选中状态
+    document.querySelectorAll('.theme-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    event.currentTarget.classList.add('active');
+    
+    updatePreview();
+    hasUnsavedChanges = true;
+}
+
+// 添加页面离开提示
+window.addEventListener('beforeunload', (e) => {
+    if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
+});
+
+// 保存设置后清除未保存标记
+async function saveAllSettings() {
+    try {
+        // 验证用户名
+        const username = document.querySelector('[name="username"]');
+        if (username && username.value && (username.value.length < 5 || username.value.length > 12)) {  // 修改这里
+            mdui.snackbar({message: '用户名长度必须在5-12位之间'});  // 修改这里
+            return;
+        }
+
+        // 验证密码
+        const newPassword = document.querySelector('[name="new_password"]');
+        const confirmPassword = document.querySelector('[name="confirm_password"]');
+        const currentPassword = document.querySelector('[name="current_password"]');
+
+        if (newPassword && newPassword.value) {
+            if (!currentPassword || !currentPassword.value) {
+                mdui.snackbar({message: '请输入当前密码'});
+                return;
+            }
+            if (newPassword.value !== confirmPassword.value) {
+                mdui.snackbar({message: '两次输入的密码不一致'});
+                return;
+            }
+            if (!checkPasswordStrength(newPassword)) {
+                mdui.snackbar({message: '密码强度不够'});
+                return;
+            }
+        }
+
+        const settings = {
+            nickname: document.querySelector('[name="nickname"]')?.value || '',
+            username: username?.value || '',
+            current_password: currentPassword?.value || '',
+            new_password: newPassword?.value || '',
+            theme_settings: {
+                primary_color: getComputedStyle(document.documentElement).getPropertyValue('--theme-primary').trim(),
+                accent_color: getComputedStyle(document.documentElement).getPropertyValue('--theme-accent').trim(),
+                card_radius: parseInt(document.querySelector('[name="card_radius"]')?.value || '8'),
+                card_opacity: parseInt(document.querySelector('[name="card_opacity"]')?.value || '100'),
+                nav_opacity: parseInt(document.querySelector('[name="nav_opacity"]')?.value || '100')
+            }
+        };
+
+        // 显示加载状态
+        const loadingDialog = mdui.dialog({
+            title: '保存中...',
+            content: '<div class="mdui-spinner"></div>',
+            buttons: [],
+            closeOnEsc: false,
+            modal: true
+        });
+        mdui.mutation();
+
+        const response = await fetch('/api/settings/theme', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(settings)
+        });
+        
+        const result = await response.json();
+        loadingDialog.close();
+        
+        if (result.success) {
+            hasUnsavedChanges = false;
+            mdui.snackbar({
+                message: '设置已保存',
+                timeout: 2000,
+                onClose: () => location.reload()
+            });
+        } else {
+            throw new Error(result.error || '保存失败');
+        }
+    } catch (error) {
+        console.error('保存设置错误:', error);
+        mdui.snackbar({message: error.message || '保存失败，请重试'});
+    }
+}
+
+// 路由切换前检查
+document.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', (e) => {
+        if (hasUnsavedChanges) {
+            const confirmed = confirm('有未保存的更改，确定要离开吗？');
+            if (!confirmed) {
+                e.preventDefault();
+            } else {
+                hasUnsavedChanges = false;  // 用户确认离开，重置状态
+            }
+        }
+    });
+});
+
+// 头像上传预览
+document.getElementById('avatar-input').addEventListener('change', function(e) {
+    if (this.files && this.files[0]) {
+        const file = this.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            // 更新头像预览
+            const avatarBox = document.querySelector('.avatar-box');
+            avatarBox.innerHTML = `
+                <img src="${e.target.result}" alt="头像">
+                <div class="avatar-overlay">
+                    <i class="mdui-icon material-icons">photo_camera</i>
+                </div>
+            `;
+        };
+        
+        reader.readAsDataURL(file);
+    }
+});
+
+// 头像上传预览和保存
+document.getElementById('avatar-input').addEventListener('change', async function(e) {
+    if (this.files && this.files[0]) {
+        const file = this.files[0];
+        
+        // 创建 FormData 对象
+        const formData = new FormData();
+        formData.append('avatar', file);
+        
+        try {
+            const response = await fetch('/api/settings/avatar', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                // 更新头像预览
+                const avatarBox = document.querySelector('.avatar-box');
+                avatarBox.innerHTML = `
+                    <img src="${result.avatar_url}" class="user-avatar" alt="头像">
+                    <div class="avatar-overlay">
+                        <i class="mdui-icon material-icons">photo_camera</i>
+                    </div>
+                `;
+                
+                mdui.snackbar({message: '头像上传成功'});
+            } else {
+                throw new Error(result.error || '上传失败');
+            }
+        } catch (error) {
+            mdui.snackbar({message: error.message || '头像上传失败，请重试'});
+        }
+    }
+});
+
+// 保存设置
+document.getElementById('profile-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    try {
+        const response = await fetch('/api/settings/profile', {
+            method: 'POST',
+            body: formData
+        });
+        const result = await response.json();
+        if (result.success) {
+            mdui.snackbar({message: '个人资料已更新'});
+        }
+    } catch (error) {
+        mdui.snackbar({message: '保存失败，请重试'});
+    }
+});
+
+document.getElementById('theme-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    try {
+        const response = await fetch('/api/settings/theme', {
+            method: 'POST',
+            body: formData
+        });
+        const result = await response.json();
+        if (result.success) {
+            mdui.snackbar({
+                message: '界面设置已更新',
+                onClose: () => location.reload()
+            });
+        }
+    } catch (error) {
+        mdui.snackbar({message: '保存失败，请重试'});
+    }
+});
+
+async function exportData(format) {
+    const url = `/api/export/diary?format=${format}`;
+    window.location.href = url;
+}
+
+function linkGithub() {
+    window.location.href = '/login/github';
+}
+
+function setThemeColor(color) {
+    document.documentElement.style.setProperty('--theme-color', color);
+    document.querySelectorAll('.theme-color-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.currentTarget.classList.add('active');
+}
+
+function setCardColor(color) {
+    document.documentElement.style.setProperty('--card-color', color);
+    document.querySelectorAll('.card-color-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.currentTarget.classList.add('active');
+    updatePreview();
+}
+
+async function saveSettings() {
+    // ...existing code...
+}
+
+function setTheme(theme) {
+    const previewCard = document.getElementById('preview-card');
+    if (theme === 'dark') {
+        previewCard.style.backgroundColor = '#303030';
+        previewCard.style.color = '#FFFFFF';
+        document.documentElement.style.setProperty('--theme-color', '#BB86FC');
+    } else {
+        previewCard.style.backgroundColor = '#FFFFFF';
+        previewCard.style.color = '#000000';
+        document.documentElement.style.setProperty('--theme-color', '#2196F3');
+    }
+    
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.classList.remove('mdui-color-theme');
+    });
+    event.currentTarget.classList.add('mdui-color-theme');
+}
+
+// 初始化
+document.addEventListener('DOMContentLoaded', function() {
+    mdui.mutation();
+    updatePreview();
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelector('.avatar-wrapper').addEventListener('click', function() {
+        document.getElementById('avatar-input').click();
+    });
+
+    // 密码验证
+    const form = document.querySelector('form');
+    const currentPassword = document.querySelector('[name="current_password"]');
+    const newPassword = document.querySelector('[name="new_password"]');
+    const confirmPassword = document.querySelector('[name="confirm_password"]');
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        if (newPassword.value) {
+            if (!currentPassword.value) {
+                mdui.snackbar({message: '请输入当前密码'});
+                return;
+            }
+            if (newPassword.value !== confirmPassword.value) {
+                mdui.snackbar({message: '两次输入的新密码不一致'});
+                return;
+            }
+        }
+        
+        await saveAllSettings();
+    });
+});
+
+// 修改设置主题的函数
+function setTheme(primary, accent) {
+    document.documentElement.style.setProperty('--theme-primary', primary);
+    document.documentElement.style.setProperty('--theme-accent', accent);
+    
+    // 更新选中状态
+    document.querySelectorAll('.theme-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    event.currentTarget.classList.add('active');
+    
+    hasUnsavedChanges = true;
+}
+
+// 页面加载时设置当前主题的选中状态
+document.addEventListener('DOMContentLoaded', function() {
+    // 获取当前主题颜色
+    const currentTheme = getComputedStyle(document.documentElement)
+        .getPropertyValue('--theme-primary').trim();
+    
+    // 设置对应主题选项的选中状态
+    document.querySelectorAll('.theme-item').forEach(item => {
+        const themeColor = item.querySelector('.color.primary').style.backgroundColor;
+        if (themeColor === currentTheme) {
+            item.classList.add('active');
+        }
+    });
+    
+    // ...existing code...
+});
+
+// 页面加载时或更改主题时设置hasUnsavedChanges为false
+document.addEventListener('DOMContentLoaded', function() {
+    hasUnsavedChanges = false;
+    // ...existing initialization code...
+});
+
+</script>
+{% endblock %}

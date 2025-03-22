@@ -1,0 +1,752 @@
+{% extends "base.html" %}
+{% block title %}我的日记{% endblock %}
+{% block page_title %}我的日记{% endblock %}
+{% block content %}
+<div class="diary-container">
+    <!-- 添加侧边翻页按钮 -->
+    {% if has_prev %}
+    <a href="{{ url_for('mydiary', page=page-1) }}" class="side-nav-btn side-nav-left">
+        <i class="mdui-icon material-icons">chevron_left</i>
+    </a>
+    {% endif %}
+    
+    {% if has_next %}
+    <a href="{{ url_for('mydiary', page=page+1) }}" class="side-nav-btn side-nav-right">
+        <i class="mdui-icon material-icons">chevron_right</i>
+    </a>
+    {% endif %}
+
+    <!-- 添加页码指示器 -->
+    <div class="page-indicator">
+        {{ page }} / {{ total_pages }}
+    </div>
+
+    {% if diary_list %}
+        {% for diary in diary_list %}
+        <div class="mdui-card diary-card">
+            <div class="mdui-card-content">
+                <div class="preview-date">{{ diary.created_at.strftime('%Y-%m-%d') }}</div>
+                <div class="diary-meta">
+                    {% if diary.mood %}
+                    <span class="diary-mood">
+                        <i class="mdui-icon material-icons">mood</i>
+                        {{ diary.mood }}
+                    </span>
+                    {% endif %}
+                    {% if diary.location %}
+                    <span class="diary-location">
+                        <i class="mdui-icon material-icons">location_on</i>
+                        {{ diary.location }}
+                    </span>
+                    {% endif %}
+                </div>
+                <div class="diary-divider"></div>
+                <div class="diary-text">
+                    {{ diary.content }}
+                </div>
+                <div class="diary-action-divider"></div>
+                <div class="diary-actions">
+                    <button class="mdui-btn action-btn delete-btn" onclick="confirmDelete({{ diary.id }})">
+                        <i class="mdui-icon material-icons">delete_forever</i>
+                        删除
+                    </button>
+                    <button class="mdui-btn action-btn share-btn" onclick="shareDiary({{ diary.id }})">
+                        <i class="mdui-icon material-icons">share</i>
+                        转发
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <i class="mdui-icon material-icons">{{ empty_icon }}</i>
+            <div class="empty-title">{{ empty_title }}</div>
+            <div class="empty-subtitle">{{ empty_subtitle }}</div>
+            <div class="empty-text">{{ empty_text }}</div>
+            <a href="/add" class="mdui-btn mdui-btn-raised mdui-ripple mdui-color-theme-accent write-first-btn">
+                <i class="mdui-icon material-icons">edit</i>
+                {{ empty_button_text }}
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.diary-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 16px;
+}
+
+.diary-card {
+    border-radius: var(--card-radius) !important;
+    opacity: var(--card-opacity) !important;
+    background-color: white;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    margin-bottom: 24px;
+    width: 100%;
+    height: auto;  /* 让卡片高度自适应内容 */
+    transition: all 0.3s ease;
+}
+
+.diary-card .mdui-card-content {
+    padding: 20px !important;
+    height: auto;  /* 让内容区域高度自适应 */
+    overflow: visible;  /* 移除溢出隐藏 */
+}
+
+.preview-date {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 12px;
+    font-weight: 500;
+}
+
+.diary-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+    color: rgba(0,0,0,0.5);
+    font-size: 0.85rem;
+}
+
+.diary-meta span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.diary-meta .mdui-icon {
+    font-size: 1.1rem;
+}
+
+.diary-divider {
+    height: 1px;
+    background-color: rgba(0,0,0,0.08);
+    margin: 12px 0;  /* 减少分隔线的上下间距 */
+    position: relative;
+    top: calc(100% / 3);
+}
+
+/* 日记内容对齐样式 */
+.diary-content {
+    text-align: left !important;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.8;
+    color: #333;
+    padding: 0 !important;  /* 移除缩进 */
+    margin: 4px 0 16px 0 !important;  /* 修改margin,确保左边距为0 */
+    max-height: none;  /* 移除最大高度限制 */
+    overflow: visible; /* 移除滚动条 */
+    text-indent: 0 !重要;  /* 移除首行缩进 */
+}
+
+.preview-date,
+.diary-meta,
+.diary-content {
+    padding-left: 0 !important;  /* 确保左侧对齐一致 */
+    padding-right: 0 !important;
+}
+
+.diary-text {
+    margin-top: 12px;
+    color: rgba(0,0,0,0.87);
+    line-height: 1.6;
+    font-size: 0.95rem;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 64px 16px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.8), rgba(255,255,255,0.95));
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+    backdrop-filter: blur(10px);
+}
+
+.empty-state .mdui-icon {
+    font-size: 64px;
+    color: var(--theme-primary, #2196F3);
+    margin-bottom: 24px;
+    opacity: 0.8;
+}
+
+.empty-title {
+    font-size: 28px;
+    color: #333;
+    margin-bottom: 12px;
+    font-weight: 500;
+}
+
+.empty-subtitle {
+    font-size: 18px;
+    color: #666;
+    margin-bottom: 32px;
+}
+
+.empty-text {
+    color: #999;
+    margin-bottom: 32px;
+    font-size: 14px;
+}
+
+/* 美化空状态下的写日记按钮 */
+.write-first-btn {
+    min-width: 200px !important;
+    height: 52px !important;
+    font-size: 16px !important;
+    border-radius: 26px !important;
+    padding: 0 32px !important;
+    background: linear-gradient(45deg, var(--theme-primary), var(--theme-accent)) !important;
+    box-shadow: 0 4px 20px rgba(33, 150, 243, 0.3) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 32px;
+}
+
+.write-first-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(33, 150, 243, 0.4) !important;
+}
+
+.write-first-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 16px rgba(33, 150, 243, 0.3) !重要;
+}
+
+.write-first-btn .mdui-icon {
+    font-size: 24px !important;
+    margin: 0 !important;
+    opacity: 1 !important;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+    .write-first-btn {
+        min-width: 180px !important;
+        height: 48px !重要;
+    }
+
+    .write-first-btn .mdui-icon {
+        font-size: 20px !重要;
+    }
+}
+
+@media (max-width: 768px) {
+    .empty-state {
+        padding: 48px 16px;
+    }
+
+    .empty-title {
+        font-size: 24px;
+    }
+
+    .empty-subtitle {
+        font-size: 16px;
+    }
+
+    .write-first-btn {
+        width: 100% !重要;
+        max-width: 280px;
+    }
+}
+
+.mdui-card {
+    border-radius: var(--card-radius) !重要;
+    opacity: var(--card-opacity) !重要;
+    transition: all 0.3s ease;
+    height: auto !重要;  /* 确保卡片高度自适应 */
+    min-height: 0 !重要;  /* 移除最小高度限制 */
+}
+
+/* 美化分页样式 */
+.pagination-container {
+    display: none;
+}
+
+/* 添加侧边翻页按钮样式 */
+.side-nav-btn {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 80px;
+    background: rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    color: rgba(0, 0, 0, 0.5);
+    text-decoration: none;
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.side-nav-btn:hover {
+    background: rgba(0, 0, 0, 0.2);
+    color: rgba(0, 0, 0, 0.7);
+}
+
+.side-nav-left {
+    left: 20px;
+}
+
+.side-nav-right {
+    right: 20px;
+}
+
+.side-nav-btn .mdui-icon {
+    font-size: 24px;
+}
+
+/* 页码指示器样式 */
+.page-indicator {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    color: rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+    .side-nav-btn {
+        width: 32px;
+        height: 64px;
+    }
+
+    .side-nav-left {
+        left: 8px;
+    }
+
+    .side-nav-right {
+        right: 8px;
+    }
+}
+
+/* 移除之前可能存在的最大高度限制 */
+.diary-card-content {
+    max-height: none !重要;
+    overflow: visible !重要;
+}
+
+/* 修改操作分割线和按钮样式 */
+.diary-action-divider {
+    height: 1px;
+    background-color: rgba(0,0,0,0.08);
+    margin: 24px -24px;
+}
+
+.diary-actions {
+    display: flex;
+    margin: -24px;
+    margin-top: 0;
+}
+
+.action-btn {
+    flex: 1;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    font-size: 15px !important;
+    color: #666 !important;
+    transition: all 0.2s ease;
+    border-top: 1px solid rgba(0,0,0,0.08);
+}
+
+.action-btn::after {
+    content: '';
+    position: absolute;
+    top: 20%;
+    width: 1px;
+    height: 60%;
+    background: rgba(0,0,0,0.08);
+}
+
+.delete-btn::after {
+    right: 0;
+}
+
+.share-btn::after {
+    left: 0;
+}
+
+.delete-btn:hover {
+    background-color: #ffebee !important;
+    color: #f44336 !important;
+}
+
+.share-btn:hover {
+    background-color: var(--theme-color-light) !important;
+    color: var(--theme-primary) !important;
+}
+
+.action-btn .mdui-icon {
+    font-size: 20px;
+}
+
+/* 添加确认删除弹窗样式 */
+.confirm-dialog {
+    max-width: 400px !important;
+    border-radius: 12px !important;
+    padding: 24px !important;
+    text-align: center;
+}
+
+.dialog-icon {
+    margin-bottom: 16px;
+}
+
+.dialog-icon .mdui-icon {
+    font-size: 48px;
+    color: #ff5252;
+}
+
+.dialog-title {
+    font-size: 20px;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 16px;
+}
+
+.dialog-content {
+    color: #666;
+    line-height: 1.6;
+    margin-bottom: 24px;
+}
+
+.dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 24px;
+}
+
+.dialog-actions .mdui-btn {
+    min-width: 80px !important;
+    font-weight: 500;
+}
+
+/* 添加分享对话框样式 */
+.share-dialog {
+    max-width: 400px !important;
+}
+
+.share-dialog-content {
+    padding: 16px 0;
+}
+
+.share-option {
+    display: flex;
+    align-items: center;
+    padding: 16px 24px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.share-option:hover {
+    background-color: rgba(0,0,0,0.05);
+}
+
+.share-option .mdui-icon {
+    font-size: 24px;
+    margin-right: 16px;
+    color: var(--theme-primary);
+}
+
+.share-option-text {
+    flex: 1;
+}
+
+.option-title {
+    font-size: 16px;
+    margin-bottom: 4px;
+    color: rgba(0,0,0,0.87);
+}
+
+.option-desc {
+    font-size: 14px;
+    color: rgba(0,0,0,0.54);
+}
+
+/* 美化警告对话框样式 */
+.warning-icon {
+    color: #ff5252;
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.warning-icon .mdui-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+}
+
+.warning-title {
+    font-size: 18px;
+    font-weight: 500;
+    margin-bottom: 16px;
+    text-align: center;
+    color: #333;
+}
+
+.warning-text {
+    color: #666;
+    line-height: 1.6;
+    text-align: center;
+}
+
+/* 调整日期和内容的对齐方式 */
+.mdui-card-content {
+    padding: 24px !important;
+}
+
+.preview-date {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 12px;
+    font-weight: 500;
+    padding-left: 0 !important;  /* 确保日期没有左内边距 */
+    line-height: 1.5;  /* 添加行高确保对齐 */
+}
+
+.diary-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+    color: rgba(0,0,0,0.5);
+    font-size: 0.85rem;
+    padding-left: 0 !important;  /* 确保心情和位置信息没有左内边距 */
+}
+
+.diary-divider {
+    height: 1px;
+    background-color: rgba(0,0,0,0.08);
+    margin: 12px 0;
+    position: relative;
+}
+
+.diary-content {
+    text-align: left !important;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.8;
+    color: #333;
+    margin: 4px 0 16px 0 !important;  /* 调整外边距 */
+    max-height: none;
+    overflow: visible;
+    padding: 0 !important;  /* 移除所有内边距 */
+    text-indent: 0 !important;  /* 确保没有首行缩进 */
+}
+
+/* 确保所有元素对齐 */
+.diary-card .mdui-card-content > * {
+    margin-left: 0 !important;  /* 统一左对齐 */
+    padding-left: 0 !important; /* 移除所有左内边距 */
+}
+</style>
+
+<script>
+function moveToTrash(diaryId) {
+    mdui.confirm('确定要将这篇日记移动到回收站吗？', '提示', function() {
+        fetch(`/api/diary/${diaryId}/delete`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mdui.snackbar({
+                    message: '已移动到回收站',
+                    onClose: () => location.reload()
+                });
+            } else {
+                throw new Error(data.error || '操作失败');
+            }
+        })
+        .catch(error => {
+            mdui.snackbar({
+                message: error.message || '操作失败，请重试'
+            });
+        });
+    });
+}
+
+function shareDiary(diaryId) {
+    mdui.dialog({
+        title: '分享日记',
+        content: `
+            <div class="share-dialog-content">
+                <div class="share-option" onclick="shareToWall(${diaryId})">
+                    <i class="mdui-icon material-icons">public</i>
+                    <div class="share-option-text">
+                        <div class="option-title">发布到日记墙</div>
+                        <div class="option-desc">让其他用户也能看到你的日记</div>
+                    </div>
+                </div>
+                <div class="share-option" onclick="copyLink(${diaryId})">
+                    <i class="mdui-icon material-icons">link</i>
+                    <div class="share-option-text">
+                        <div class="option-title">复制链接</div>
+                        <div class="option-desc">复制日记链接分享给他人</div>
+                    </div>
+                </div>
+            </div>
+        `,
+        buttons: [{
+            text: '关闭',
+            bold: true
+        }],
+        cssClass: 'share-dialog'
+    });
+}
+
+function shareToWall(diaryId) {
+    fetch(`/api/diary/${diaryId}/toggle_public`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mdui.snackbar({
+                message: data.is_public ? '已发布到日记墙' : '已取消发布',
+                onClose: () => location.reload()
+            });
+        }
+    })
+    .catch(error => {
+        mdui.snackbar({message: '操作失败，请重试'});
+    });
+}
+
+function copyLink(diaryId) {
+    const link = `${window.location.origin}/diary/${diaryId}`;
+    navigator.clipboard.writeText(link).then(() => {
+        mdui.snackbar({message: '链接已复制'});
+    });
+}
+
+function confirmDelete(diaryId) {
+    mdui.dialog({
+        title: '确认删除',
+        content: `
+            <div class="dialog-content">
+                <div class="warning-icon">
+                    <i class="mdui-icon material-icons">warning</i>
+                </div>
+                <div class="warning-title">确定要删除这篇日记吗？</div>
+                <div class="warning-text">此操作不可恢复！</div>
+            </div>
+        `,
+        buttons: [
+            { text: '取消' },
+            {
+                text: '删除',
+                bold: true,
+                close: false,
+                onClick: async function(inst) {
+                    try {
+                        const response = await fetch(`/api/diary/${diaryId}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        
+                        const data = await response.json();
+                        if (data.success) {
+                            inst.close();
+                            mdui.snackbar({
+                                message: '日记已删除',
+                                timeout: 2000,
+                                onClose: () => location.reload()
+                            });
+                        } else {
+                            throw new Error(data.error || '删除失败');
+                        }
+                    } catch (error) {
+                        mdui.snackbar({
+                            message: error.message || '删除失败，请重试',
+                            timeout: 3000
+                        });
+                    }
+                }
+            }
+        ],
+        modal: true,
+        closeOnEsc: false
+    });
+}
+
+function deleteDiary(diaryId) {
+    mdui.dialog({
+        title: '确认删除',
+        content: `
+            <div class="dialog-content">
+                <div class="warning-icon"><i class="mdui-icon material-icons">warning</i></div>
+                <div class="warning-title">确定要删除这篇日记吗？</div>
+                <div class="warning-text">此操作不可恢复！</div>
+            </div>
+        `,
+        buttons: [
+            { text: '取消' },
+            {
+                text: '确认删除',
+                bold: true,
+                close: false,
+                onClick: async function(inst) {
+                    try {
+                        const response = await fetch(`/api/diary/${diaryId}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            }
+                        });
+                        
+                        const data = await response.json();
+                        if (data.success) {
+                            inst.close();
+                            mdui.snackbar({
+                                message: '日记删除成功！',
+                                timeout: 2000,
+                                onClose: () => window.location.reload()
+                            });
+                        } else {
+                            throw new Error(data.error || '删除失败');
+                        }
+                    } catch (error) {
+                        mdui.snackbar({
+                            message: error.message || '删除失败，请重试',
+                            timeout: 3000
+                        });
+                    }
+                }
+            }
+        ],
+        modal: true,
+        closeOnEsc: false
+    });
+}
+</script>
+{% endblock %}

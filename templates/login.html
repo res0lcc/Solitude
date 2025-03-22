@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}登录 - Solitude{% endblock %}
+{% block page_title %}登录{% endblock %}
+{% block content %}
+<div class="auth-card mdui-card">
+    <div class="mdui-card-primary">
+        <div class="mdui-card-primary-title">登录</div>
+    </div>
+    <div class="mdui-card-content">
+        <form id="loginForm" method="POST">
+            <div class="mdui-textfield">
+                <label class="mdui-textfield-label">用户名</label>
+                <input class="mdui-textfield-input" type="text" name="username" required/>
+            </div>
+            <div class="mdui-textfield">
+                <label class="mdui-textfield-label">密码</label>
+                <input class="mdui-textfield-input" type="password" name="password" required/>
+            </div>
+            <div id="errorMsg" class="error-message"></div>
+            <div class="login-actions">
+                <button class="mdui-btn mdui-btn-raised mdui-ripple mdui-color-theme" type="submit">登录</button>
+            </div>
+            <div class="register-link">
+                还没有账号？<a href="/create_user">点击注册</a>
+            </div>
+            <div class="agreement-text">
+                登录即表示您同意我们的<a href="javascript:void(0);" onclick="showTerms()">用户协议</a>和<a href="javascript:void(0);" onclick="showPrivacy()">隐私政策</a>。
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.auth-card {
+    max-width: 400px;
+    margin: 40px auto;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    overflow: hidden;
+    background: white;
+}
+
+.mdui-card-primary {
+    padding: 32px 24px;
+    background: linear-gradient(to right, var(--theme-color), var(--theme-color-light));
+    text-align: center;
+}
+
+.mdui-card-primary-title {
+    color: white;
+    font-size: 24px;
+    margin-bottom: 8px;
+}
+
+.mdui-card-primary-subtitle {
+    color: rgba(255,255,255,0.8);
+}
+
+.mdui-card-content {
+    padding: 24px;
+}
+
+.mdui-textfield {
+    margin-bottom: 24px;
+}
+
+.login-actions {
+    margin-top: 32px;
+    text-align: center;
+}
+
+.login-actions .mdui-btn {
+    width: 100%;
+    height: 44px;
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    margin-bottom: 24px;
+}
+
+.register-link {
+    text-align: center;
+    margin-top: 16px;
+    font-size: 14px;
+}
+
+.register-link a {
+    color: var(--theme-color);
+    text-decoration: none;
+}
+
+.error-message {
+    color: red;
+    margin: 10px 0;
+}
+
+.agreement-text {
+    text-align: center;
+    font-size: 13px;
+    margin-top: 16px;
+}
+
+.agreement-text a {
+    text-decoration: none;
+    color: var(--theme-color);
+}
+</style>
+
+<script>
+document.getElementById('loginForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    fetch('/api/login', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            username: this.username.value,
+            password: this.password.value
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = '/';
+        } else {
+            document.getElementById('errorMsg').innerText = '用户名或密码错误';
+        }
+    })
+    .catch(error => {
+        document.getElementById('errorMsg').innerText = '登录失败，请重试';
+    });
+});
+
+function showTerms() {
+    mdui.dialog({
+        title: '用户协议',
+        content: '懒得写',
+        buttons: [
+            {
+                text: '关闭'
+            }
+        ]
+    });
+}
+
+function showPrivacy() {
+    mdui.dialog({
+        title: '隐私政策',
+        content: '也懒得写',
+        buttons: [
+            {
+                text: '关闭'
+            }
+        ]
+    });
+}
+</script>
+{% endblock %}
